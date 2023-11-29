@@ -21,7 +21,7 @@ engine::IL::~IL() {
 void engine::IL::analyze() {
     DeclareFunction* function = nullptr;
     
-    for (size_t i = 0; i < m_tokens.size();) {
+    for (size_t i = 0; i < m_tokens.size(); ++i) {
         const Token& token = m_tokens.at(i);
 
         switch (token.type) {
@@ -30,25 +30,34 @@ void engine::IL::analyze() {
                     auto [il, size] = AnalyzeDeclareFunction(token);
                     function = (DeclareFunction*)&il->data;
                     m_ils.push_back(il);
-                    i += size;
+                    i += size - 1;
                 }
                 else if (isDataType(token) == true) {
                     auto [il, size] = AnalyzeDeclareVariable(function, token);
                     m_ils.push_back(il);
-                    i += size;
+                    i += size - 1;
                 }
                 else if (token.value == "ret") {
                     auto [il, size] = AnalyzeReturn(function, token);
                     m_ils.push_back(il);
-                    i += size;
+                    i += size - 1;
+                }
+            } break;
+            case TOKEN_TYPE_IDENTIFIER: {
+                if (Move(token, 1).type == TOKEN_TYPE_ARG_START) {
+                    ASSERT(FindFunction(token.value) != NULL, "Function '%s' not found", token.value.data());
+                    
+                    auto [il, size] = AnalyzeCall(function, token);
+                    m_ils.push_back(il);
+                    i += size - 1;
                 }
             } break;
             case TOKEN_TYPE_OPERATOR: {
                 auto [il, size] = AnalyzeOperator(function, token);
                 m_ils.push_back(il);
-                i += size;
+                i += size - 1;
             } break;
-            default: ++i; break;
+            default: break;
         }
     }
 }
@@ -252,6 +261,63 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
     return { nullptr, 1 };
 }
 
+pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeCall(const DeclareFunction* function, const Token& token) const {
+    ASSERT(function != nullptr, "Expected function declaration before call");
+    ASSERT(token.type == TOKEN_TYPE_IDENTIFIER, "Expected identifier before call");
+    ASSERT(Move(token, 1).type == TOKEN_TYPE_ARG_START, "Expected '(' after call");
+
+    const DeclareFunction* callee = FindFunction(token.value);
+    ASSERT(callee != nullptr, "Function '%s' not found", token.value.data());
+
+    size_t size = 2;
+
+    vector<const DeclareVariable*> args;
+    if (Move(token, size).type != TOKEN_TYPE_ARG_END) {
+        while (true) {
+            const Token& arg = Move(token, size);
+            ASSERT(arg.type == TOKEN_TYPE_IDENTIFIER || arg.type == TOKEN_TYPE_NUMBER || arg.type == TOKEN_TYPE_STRING, "Expected identifier in argument");
+            
+            if (arg.type == TOKEN_TYPE_IDENTIFIER) {
+                args.push_back(FindVariable(function, arg.value));
+            }
+            else {
+                args.push_back(MakeVariable(function, arg));
+            }
+
+            size += 2;
+            if (Move(token, size - 1).type != TOKEN_TYPE_NEW_ARG) {
+                break;
+            }
+        }
+    }
+
+    if (args.size() < callee->args.size()) {
+        ASSERT(false, "Too few arguments at call '%s' within '%s'", callee->name.data(), function->name.data());
+    }
+    else if (args.size() > callee->args.size()){ 
+        ASSERT(false, "Too many arguments at call '%s' within '%s'", callee->name.data(), function->name.data());
+    }
+   
+    for (size_t i = 0; i < args.size(); ++i) {
+        const DeclareVariable* left = args.at(i);
+        const DeclareVariable* right = &callee->args.at(i);
+
+        if (left->type == DATA_TYPE_STR) {
+            ASSERT(right->type == DATA_TYPE_STR, "Expected number type");
+        } else {
+            ASSERT(right->type != DATA_TYPE_STR, "Expected string type");
+        }
+
+        ASSERT(right->size >= left->size, "Integer overflow at call '%s' within '%s'", callee->name.data(), function->name.data());
+    }
+
+    FunctionCall call;
+    call.function = function;
+    call.callee = callee;
+    call.args = move(args);
+    return { CreateIL(IL_TYPE_FUNC_CALL, call), size };
+}
+
 const engine::DeclareFunction* engine::IL::FindFunction(const string& name) const {
     for (const IL_Instruction* il : m_ils) {
         if (il->type == IL_TYPE_DECLARE_FUNCTION) {
@@ -262,7 +328,7 @@ const engine::DeclareFunction* engine::IL::FindFunction(const string& name) cons
         }
     }
 
-    ASSERT(false, "Function not found");
+    return nullptr;
 }
 
 const engine::DeclareVariable* engine::IL::FindVariable(const DeclareFunction* function, const string& name) const {
@@ -277,7 +343,7 @@ const engine::DeclareVariable* engine::IL::FindVariable(const DeclareFunction* f
         }
     }
 
-    ASSERT(false, "Variable not found");
+    return nullptr;
 }
 
 engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* function, const Token& token) const {
@@ -312,8 +378,4 @@ engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* functio
 
     var->size = DATA_TYPE_SIZES.at(var->type);
     return var;
-}
-
-pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeCall(const DeclareFunction* function, const Token& token) const {
-    return { nullptr, 1 };
 }

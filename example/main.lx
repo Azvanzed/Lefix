@@ -1,28 +1,9 @@
-fn u8 _start(u64 image_handle, str some_other_argument, u32 lol, u64 maybe_not_xD, u8 lol) {
-    u32 a = 0xFFFFFFF;
-    bool b = 1;
-    u16 c = 14343;
-    u16 d = 321;
-    u8 g = 16;
-
-    a = g;
-
-    
-    u64 f = 0xFFFFFFFFFFFFFFFF;
-    u32 e = 256;
-
-    f = g;
-    b = g;
-
-    e = d;
-    c = d;
-
-    g = 51;
-
-    ret g;
+fn u32 some_other_function(u32 image_handle, u64 a2, u64 a3) {
+    ret 32;
 }
 
-
-fn u32 some_other_function(u64 image_handle) {
-    ret 32;
+fn u8 _start(u64 image_handle, str some_other_argument, u32 lol, u64 maybe_not_xD, u8 lol) {
+    u32 test = 128;
+    some_other_function(16, 32, test);
+    ret 64;
 }

@@ -79,6 +79,16 @@ void engine::Assembler::assemble() {
         return size;
     };
 
+    const auto getArgsSize = [](const DeclareFunction* function) -> size_t {
+        size_t size = 0;
+
+        for (const DeclareVariable& arg : function->args) {
+            size += arg.size / 8;
+        }
+        
+        return size;
+    };
+
     const auto getStackOffset = [&](const DeclareVariable* var) -> size_t {
         size_t offset = 0;
         for (const auto& [v, o] : stack) {
@@ -96,6 +106,8 @@ void engine::Assembler::assemble() {
     m_output += "global _start\n\n";
     
     for (const IL_Instruction* il : m_ils) {
+        ASSERT(il != nullptr, "il is null");
+
         switch (il->type) {
             case IL_TYPE_DECLARE_FUNCTION: {
                 function = (DeclareFunction*)&il->data;
@@ -124,6 +136,32 @@ void engine::Assembler::assemble() {
                     mov("rax", "[rsp+" + to_string(getStackOffset(data->right)) + "]");
                     mov("[rsp+" + to_string(getStackOffset(data->left)) + "]", "rax");
                 }
+            } break;
+            case IL_TYPE_FUNC_CALL: {
+                const FunctionCall* data = (FunctionCall*)&il->data;
+                
+                if (data->args.empty() == false) {
+                    sub("rsp", to_string(getArgsSize(data->callee)));
+
+                    size_t arg_offset = 0;
+                    for (size_t i = 0; i < data->args.size(); i++) {
+                        const DeclareVariable* arg = data->args[i];
+                        const DeclareVariable* callee_arg = &data->callee->args[i];
+
+                        if (arg->value.empty() == false) {
+                            mov("rax", to_string(IL::getImm(arg->value)));
+                            mov("[rsp+" + to_string(arg_offset) + "]", "rax");
+                        }
+                        else {
+                            mov("rax", "[rsp+" + to_string(getStackOffset(arg)) + "]");
+                            mov("[rsp+" + to_string(arg_offset) + "]", "rax");
+                        }
+
+                        arg_offset += callee_arg->size / 8; 
+                    }
+                }
+
+                call(data->callee->name);
             } break;
             case IL_TYPE_RETURN: {
                 const FunctionReturn* data = (FunctionReturn*)&il->data;

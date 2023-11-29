@@ -61,7 +61,7 @@ namespace engine {
     };
 
     struct FunctionReturn {
-        const struct DeclareFunction* function;
+        const DeclareFunction* function;
         const DeclareVariable* var;
     };
 
@@ -69,19 +69,26 @@ namespace engine {
         const DeclareVariable* left;
         const DeclareVariable* right;
     };
+
+    struct FunctionCall {
+        const DeclareFunction* function;
+        const DeclareFunction* callee;
+        vector<const DeclareVariable*> args;
+    };
     
     enum InstructionType {
         IL_TYPE_UNKNOWN,
         IL_TYPE_DECLARE_VARIABLE,
         IL_TYPE_DECLARE_FUNCTION,
         IL_TYPE_RETURN,
-        IL_TYPE_EQ_SET
+        IL_TYPE_EQ_SET,
+        IL_TYPE_FUNC_CALL
     };
 
     struct IL_Instruction {
         uint64_t id;
         InstructionType type;
-        variant<DeclareVariable, DeclareFunction, FunctionReturn, EQSet> data;
+        variant<DeclareVariable, DeclareFunction, FunctionReturn, EQSet, FunctionCall> data;
 
         IL_Instruction() {}
         ~IL_Instruction() {}
