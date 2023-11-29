@@ -127,6 +127,12 @@ void engine::Assembler::assemble() {
                 
                 stack.clear();
 
+                if (function->name == "_start") {
+                    // entry arguments for uefi
+                    mov("[rsp+8]", "rcx");
+                    mov("[rsp+16]", "rdx");
+                }
+
                 size_t locals_size = getLocalsSize();
                 if (locals_size > 0) {
                     sub("rsp", to_string(locals_size));
@@ -138,7 +144,7 @@ void engine::Assembler::assemble() {
             } break;
             case IL_TYPE_EQ_SET: {
                 const EQSet* data = (EQSet*)&il->data;
-                
+            
                 if (data->right->value.empty() == false) {
                     mov("rax", to_string(IL::getImm(data->right->value)));
                     mov("[rsp+" + to_string(getStackOffset(data->left)) + "]", "rax");

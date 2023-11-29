@@ -1,8 +1,9 @@
-fn u64 other() {
+fn u64 other(u64 lmfao) {
+
     ret 32;
 }
 
-fn u64 _start() {
-    other();
-    ret 64;
+fn u64 _start(u64 image_handle, u64 st) {
+    u64 test = image_handle;
+    ret test;
 }
