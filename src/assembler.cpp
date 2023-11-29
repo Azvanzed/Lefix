@@ -69,8 +69,9 @@ void engine::Assembler::assemble() {
         size_t size = 0;
 
         for (const IL_Instruction* il : m_ils) {
-            if (il->type == IL_TYPE_DECLARE_VARIABLE) {
-                const DeclareVariable* var = (DeclareVariable*)&il->data;
+            const DeclareVariable* var = (DeclareVariable*)&il->data;
+                
+            if (var->function == function && il->type == IL_TYPE_DECLARE_VARIABLE) {
                 size += var->size / 8;
             }
         }
@@ -99,10 +100,14 @@ void engine::Assembler::assemble() {
             case IL_TYPE_DECLARE_FUNCTION: {
                 function = (DeclareFunction*)&il->data;
                 
-                label(function->name == "efi_main" ? "_start" : function->name);
+                label(function->name);
                 
                 stack.clear();
-                sub("rsp", to_string(getLocalsSize()));
+
+                size_t locals_size = getLocalsSize();
+                if (locals_size > 0) {
+                    sub("rsp", to_string(locals_size));
+                }
             } break;
             case IL_TYPE_DECLARE_VARIABLE: {
                 const DeclareVariable* data = (DeclareVariable*)&il->data;
@@ -135,7 +140,7 @@ void engine::Assembler::assemble() {
                     add("rsp", to_string(stack_size));
                 }
 
-                if (function->name == "efi_main") {
+                if (function->name == "_start") {
                     // exit process syscall for testing
                     mov("rbx", "rax");
                     mov("rax", "1");
@@ -145,6 +150,7 @@ void engine::Assembler::assemble() {
                     ret();
                 }
 
+                m_output += "\n";
             } break;
             default: break;
         }

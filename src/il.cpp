@@ -108,13 +108,9 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeDeclareFunction(const T
             ASSERT(isDataType(arg) == true, "Expected data type in argument");
             ASSERT(Move(token, size + 1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier after data type in argument");
 
-            DeclareVariable* arg_var = new DeclareVariable();
-            arg_var->function =  nullptr;
-            arg_var->type = DATA_TYPES.at(arg.value);
-            arg_var->name = Move(token, size + 1).value;
-            arg_var->value = "";
-            arg_var->size = DATA_TYPE_SIZES.at(arg_var->type);
-            ((DeclareFunction*)&il->data)->args.push_back(arg_var);
+            auto [il_arg, il_size] = AnalyzeDeclareVariable((DeclareFunction*)&il->data, arg);
+            get<DeclareFunction>(il->data).args.push_back(get<DeclareVariable>(il_arg->data));
+            delete il_arg;
 
             size += 3;
             if (Move(token, size - 1).type != TOKEN_TYPE_NEW_ARG) {
@@ -135,6 +131,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeDeclareVariable(const D
     var.type = DATA_TYPES.at(token.value);
     var.size = DATA_TYPE_SIZES.at(var.type);
     var.name = Move(token, 1).value;
+    var.value = "";
     return { CreateIL(IL_TYPE_DECLARE_VARIABLE, var), 2 };    
 }
 
@@ -148,9 +145,29 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
 
     switch (src.type)
     {
-    case TOKEN_TYPE_IDENTIFIER: ret.var = (const DeclareVariable*)&FindVariable(function, src.value); break;
-    case TOKEN_TYPE_STRING:
-    case TOKEN_TYPE_NUMBER: ret.var = MakeVariable(function, src); break;
+    case TOKEN_TYPE_IDENTIFIER: {
+        ret.var = FindVariable(function, src.value);
+
+        if (ret.function->ret_type == DATA_TYPE_STR) {
+            ASSERT(ret.var->type == DATA_TYPE_STR, "Expected string type at return statement of '%s'", function->name.data());
+        } else {
+            ASSERT(ret.var->type != DATA_TYPE_STR, "Expected number type at return statement of '%s'", function->name.data());
+        }
+
+        ASSERT(DATA_TYPE_SIZES.at(function->ret_type) >= ret.var->size, "Integer overflow at return statement of '%s'", function->name.data());
+    } break;
+    case TOKEN_TYPE_STRING: {
+        ASSERT(function->ret_type == DATA_TYPE_STR, "Expected string type at return statement of '%s'", function->name.data());
+
+        ret.var = MakeVariable(function, src);
+        ASSERT(DATA_TYPE_SIZES.at(function->ret_type) >= ret.var->size, "Integer overflow at return statement of '%s'", function->name.data());
+    } break;
+    case TOKEN_TYPE_NUMBER: {
+        ASSERT(function->ret_type != DATA_TYPE_STR, "Expected number type at return statement of '%s'", function->name.data());
+
+        ret.var = MakeVariable(function, src);
+        ASSERT(DATA_TYPE_SIZES.at(function->ret_type) >= ret.var->size, "Integer overflow at return statement of '%s'", function->name.data());
+    } break;
     default: ASSERT(false, "Expected identifier after return keyword"); break;
     }
 
@@ -186,12 +203,12 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
         const Token& right = Move(token, 1);
 
         EQSet set;
-        set.left = (const DeclareVariable*)&FindVariable(function, left.value);
+        set.left = FindVariable(function, left.value);
 
         switch (right.type)
         {
             case TOKEN_TYPE_IDENTIFIER: {
-                set.right = (const DeclareVariable*)&FindVariable(function, right.value);
+                set.right = FindVariable(function, right.value);
                 ASSERT(set.left->type == set.right->type, "Expected same data type");
             } break;
             case TOKEN_TYPE_STRING: {
@@ -213,14 +230,27 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
     return { nullptr, 1 };
 }
 
-const engine::DeclareVariable& engine::IL::FindVariable(const DeclareFunction* function, const string& name) const {
+const engine::DeclareFunction* engine::IL::FindFunction(const string& name) const {
+    for (const IL_Instruction* il : m_ils) {
+        if (il->type == IL_TYPE_DECLARE_FUNCTION) {
+            const DeclareFunction& fn = get<DeclareFunction>(il->data);
+            if (fn.name == name) {
+                return (const DeclareFunction*)&fn;
+            }
+        }
+    }
+
+    ASSERT(false, "Function not found");
+}
+
+const engine::DeclareVariable* engine::IL::FindVariable(const DeclareFunction* function, const string& name) const {
     ASSERT(function != nullptr, "Expected function declaration");
     
     for (const IL_Instruction* il : m_ils) {
         if (il->type == IL_TYPE_DECLARE_VARIABLE) {
             const DeclareVariable& var = get<DeclareVariable>(il->data);
             if (var.function == function && var.name == name) {
-                return var;
+                return (const DeclareVariable*)&var;
             }
         }
     }
@@ -230,6 +260,7 @@ const engine::DeclareVariable& engine::IL::FindVariable(const DeclareFunction* f
 
 engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* function, const Token& token) const {
     ASSERT(function != nullptr, "Expected function declaration");
+    ASSERT(token.type == TOKEN_TYPE_STRING || token.type == TOKEN_TYPE_NUMBER, "Expected string or number token");
 
     DeclareVariable* var = new DeclareVariable();
     var->function = function;
@@ -248,7 +279,7 @@ engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* functio
             var->value = token.value.substr(1, token.value.size() - 2);
         } break;
         case TOKEN_TYPE_NUMBER: {
-            var->type = Move(token, -1).value == "ret" ? function->ret_type : getImmType(token.value);
+            var->type = getImmType(token.value);
             var->value = token.value;
         } break;
         default:
@@ -259,4 +290,8 @@ engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* functio
 
     var->size = DATA_TYPE_SIZES.at(var->type);
     return var;
+}
+
+pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeCall(const DeclareFunction* function, const Token& token) const {
+    return { nullptr, 1 };
 }

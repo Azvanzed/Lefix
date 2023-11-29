@@ -8,7 +8,6 @@ using namespace std;
 
 namespace engine {
     enum DataType {
-        DATA_TYPE_UNKNOWN,
         DATA_TYPE_I64,
         DATA_TYPE_I32,
         DATA_TYPE_I16,
@@ -58,7 +57,7 @@ namespace engine {
     struct DeclareFunction {
         string name;
         DataType ret_type;
-        vector<DeclareVariable*> args;
+        vector<DeclareVariable> args;
     };
 
     struct FunctionReturn {
@@ -112,8 +111,11 @@ namespace engine {
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeDeclareVariable(const DeclareFunction* function, const Token& token) const; 
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeReturn(const DeclareFunction* function, const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeOperator(const DeclareFunction* function, const Token& token) const;
+            [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeCall(const DeclareFunction* function, const Token& token) const;
 
-            [[nodiscard]] const DeclareVariable& FindVariable(const DeclareFunction* function, const string& name) const;
+            [[nodiscard]] const DeclareFunction* FindFunction(const string& name) const;
+
+            [[nodiscard]] const DeclareVariable* FindVariable(const DeclareFunction* function, const string& name) const;
             [[nodiscard]] DeclareVariable* MakeVariable(const DeclareFunction* function, const Token& token) const;
 
             vector<Token> m_tokens;
