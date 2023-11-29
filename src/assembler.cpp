@@ -140,8 +140,7 @@ void engine::Assembler::assemble() {
                     add("rsp", to_string(stack_size));
                 }
 
-                if (function->name == "_start") {
-                    // exit process syscall for testing
+                if (function->name == "_start") { // exit process syscall for testing
                     mov("rbx", "rax");
                     mov("rax", "1");
                     _int("80h");

@@ -2,6 +2,9 @@
 #include <iostream>
 #include <random>
 #include "assert.hpp"
+#include <stdexcept>
+#include <charconv>
+#include <limits>
 
 using namespace std;
 
@@ -175,11 +178,21 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
 }
 
 uint64_t engine::IL::getImm(const string& value) {
-    if (value.length() >= 3 && value[0] == '0' && value[1] == 'x') {
-        return strtoull(value.c_str(), nullptr, 16);
+    uint64_t num = 0;
+
+    bool isHex = value.length() >= 3 && value[0] == '0' && (value[1] == 'x' || value[1] == 'X');
+    if (isHex) {
+        auto [ptr, ec] = from_chars(value.data() + 2, value.data() + value.size(), num, 16);
+        ASSERT(ec != errc::result_out_of_range, "Integer overflow");
     } 
-    
-    return strtoull(value.c_str(), nullptr, 10);
+    else {
+        int64_t numSigned = stoll(value);
+        ASSERT(numSigned >= 0, "Negative number is not valid for u64");
+
+        num = (uint64_t)numSigned;
+    }
+
+    return num;
 }
 
 engine::DataType engine::IL::getImmType(const string& value) {
@@ -188,7 +201,9 @@ engine::DataType engine::IL::getImmType(const string& value) {
     if (num <= UINT8_MAX) return DATA_TYPE_U8;
     else if (num <= UINT16_MAX) return DATA_TYPE_U16;
     else if (num <= UINT32_MAX) return DATA_TYPE_U32;
-    return DATA_TYPE_U64;
+    else if (num <= UINT64_MAX) return DATA_TYPE_U64;
+
+    CRASH("Unknown integer type");
 }
 
 [[nodiscard]] bool engine::IL::isDataType(const Token& token) {
@@ -209,7 +224,13 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
         {
             case TOKEN_TYPE_IDENTIFIER: {
                 set.right = FindVariable(function, right.value);
-                ASSERT(set.left->type == set.right->type, "Expected same data type");
+                if (set.left->type == DATA_TYPE_STR) {
+                    ASSERT(set.right->type == DATA_TYPE_STR, "Expected string type");
+                } else {
+                    ASSERT(set.right->type != DATA_TYPE_STR, "Expected number type");
+                }
+
+                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' > '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
             } break;
             case TOKEN_TYPE_STRING: {
                 set.right = MakeVariable(function, right);
@@ -218,6 +239,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
             case TOKEN_TYPE_NUMBER: {
                 set.right = MakeVariable(function, right);
                 ASSERT(set.left->type != DATA_TYPE_STR, "Expected string type");
+                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' > '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
             } break;
             default:
                 ASSERT(false, "Unexpected token type");
