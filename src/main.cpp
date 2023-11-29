@@ -16,13 +16,13 @@ int main() {
     tokenizer.cleanup();
     auto tokens = tokenizer.tokenize();
 
-    printf("%ld tokens\n", tokens.size());
+    printf("got %ld tokens\n", tokens.size());
 
     engine::IL il(tokens);
     il.analyze();
     il.optimize();
 
-    printf("%ld ils\n", il.getILs().size());
+    printf("got %ld ils\n", il.getILs().size());
 
     engine::Assembler assembler(il.getILs());
     assembler.assemble();

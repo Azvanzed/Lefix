@@ -1,0 +1,5 @@
+obj/*
+example/*
+!example/main.asm
+!example/main.lx
+bin/*
