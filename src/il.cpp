@@ -28,7 +28,7 @@ void engine::IL::analyze() {
                     function = (DeclareFunction*)&il->data;
                     m_ils.push_back(il);
                     i += size;
-                    }
+                }
                 else if (isDataType(token) == true) {
                     auto [il, size] = AnalyzeDeclareVariable(function, token);
                     m_ils.push_back(il);
@@ -69,15 +69,15 @@ const engine::Token& engine::IL::Move(const Token& token, int64_t times) const {
     }
 
     index += times;
-    ASSERT(index < m_tokens.size(), "Index out of bounds");
+    ASSERT(index < (int64_t)m_tokens.size(), "Index out of bounds");
     
     return m_tokens.at(index);
 }
 
 uint16_t engine::IL::getRandomId() {
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-    std::uniform_int_distribution<uint64_t> dis(0, UINT16_MAX);
+    random_device rd;
+    mt19937_64 gen(rd());
+    uniform_int_distribution<uint64_t> dis(10000, 99999);
     return dis(gen);
 }
 
@@ -97,15 +97,9 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeDeclareFunction(const T
     DeclareFunction fn;
     fn.name = Move(token, 2).value;
     fn.args.clear();
-    IL_Instruction* il = CreateIL(IL_TYPE_DECLARE_FUNCTION, fn);
+    fn.ret_type = DATA_TYPES.at(Move(token, 1).value);
 
-    DeclareVariable* ret = new DeclareVariable;
-    ret->function = (const DeclareFunction*)&il->data;
-    ret->type = DATA_TYPES.at(Move(token, 1).value);
-    ret->name = "#";
-    ret->value = "";
-    ret->size = DATA_TYPE_SIZES.at(ret->type);
-    ((DeclareFunction*)&il->data)->ret = ret;
+    IL_Instruction* il = CreateIL(IL_TYPE_DECLARE_FUNCTION, fn);
 
     size_t size = 4;
     if (Move(token, size).type != TOKEN_TYPE_ARG_END) {
@@ -149,7 +143,6 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
 
     const Token& src = Move(token, 1);
 
-
     FunctionReturn ret;
     ret.function = function;
 
@@ -158,9 +151,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
     case TOKEN_TYPE_IDENTIFIER: ret.var = (const DeclareVariable*)&FindVariable(function, src.value); break;
     case TOKEN_TYPE_STRING:
     case TOKEN_TYPE_NUMBER: ret.var = MakeVariable(function, src); break;
-    default:
-        ASSERT(false, "Expected identifier after return keyword");
-        break;
+    default: ASSERT(false, "Expected identifier after return keyword"); break;
     }
 
     return { CreateIL(IL_TYPE_RETURN, ret), 2 };
@@ -257,7 +248,7 @@ engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* functio
             var->value = token.value.substr(1, token.value.size() - 2);
         } break;
         case TOKEN_TYPE_NUMBER: {
-            var->type = Move(token, -1).value == "ret" ? function->ret->type : getImmType(token.value);
+            var->type = Move(token, -1).value == "ret" ? function->ret_type : getImmType(token.value);
             var->value = token.value;
         } break;
         default:

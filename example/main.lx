@@ -1,10 +1,8 @@
-fn u32 efi_main(u64 image_handle, str some_other_argument, u32 lol, u64 nigga, u8 lol) {
+fn u8 efi_main(u64 image_handle, str some_other_argument, u32 lol, u64 maybe_not_xD, u8 lol) {
     u64 x = 64;
 
     u64 y = 32;
     x = y;
 
-    y = 0;
-
-    ret x;
+    ret 1228;
 }

@@ -27,7 +27,7 @@ void engine::Tokenizer::cleanup() {
 [[nodiscard]] uint16_t engine::Tokenizer::getRandomId() {
     random_device rd;
     mt19937_64 gen(rd());
-    uniform_int_distribution<uint64_t> dis(0, UINT16_MAX);
+    uniform_int_distribution<uint64_t> dis(10000, 99999);
     return dis(gen);
 }
 

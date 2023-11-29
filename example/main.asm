@@ -8,9 +8,7 @@ _start:
 	mov [rsp+8], rax
 	mov rax, [rsp+8]
 	mov [rsp+0], rax
-	mov rax, 0
-	mov [rsp+8], rax
-	mov rax, [rsp+0]
+	mov rax, 1228
 	add rsp, 16
 	mov rbx, rax
 	mov rax, 1

@@ -57,7 +57,7 @@ namespace engine {
 
     struct DeclareFunction {
         string name;
-        DeclareVariable* ret;
+        DataType ret_type;
         vector<DeclareVariable*> args;
     };
 

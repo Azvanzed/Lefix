@@ -116,9 +116,6 @@ void engine::Assembler::assemble() {
                     mov("[rsp+" + to_string(getStackOffset(data->left)) + "]", "rax");
                 }
                 else {
-                    printf("right: %s\n", data->right->name.data());
-                    printf("left: %s\n", data->left->name.data());
-
                     mov("rax", "[rsp+" + to_string(getStackOffset(data->right)) + "]");
                     mov("[rsp+" + to_string(getStackOffset(data->left)) + "]", "rax");
                 }
@@ -126,7 +123,12 @@ void engine::Assembler::assemble() {
             case IL_TYPE_RETURN: {
                 const FunctionReturn* data = (FunctionReturn*)&il->data;
 
-                mov("rax", "[rsp+" + to_string(getStackOffset(data->var)) + "]");
+                if (data->var->value.empty() == false) {
+                    mov("rax", to_string(IL::getImm(data->var->value)));
+                }
+                else {
+                    mov("rax", "[rsp+" + to_string(getStackOffset(data->var)) + "]");
+                }
 
                 size_t stack_size = getStackSize();
                 if (stack_size > 0) {
@@ -134,6 +136,7 @@ void engine::Assembler::assemble() {
                 }
 
                 if (function->name == "efi_main") {
+                    // exit process syscall for testing
                     mov("rbx", "rax");
                     mov("rax", "1");
                     _int("80h");
