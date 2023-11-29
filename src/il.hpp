@@ -20,6 +20,11 @@ namespace engine {
         DATA_TYPE_BOOL
     };
 
+    enum VarFlags {
+        VAR_FLAGS_NONE = 0,
+        VAR_FLAGS_ARG = (1 << 0),
+    };
+
     const static unordered_map<string, DataType> DATA_TYPES = {
         { "i64", DATA_TYPE_I64 },
         { "i32", DATA_TYPE_I32 },
@@ -52,6 +57,7 @@ namespace engine {
         size_t size;
         string name;
         string value;
+        VarFlags flags;
     };
 
     struct DeclareFunction {
@@ -73,6 +79,7 @@ namespace engine {
     struct FunctionCall {
         const DeclareFunction* function;
         const DeclareFunction* callee;
+        const DeclareVariable* ret;
         vector<const DeclareVariable*> args;
     };
     
@@ -108,6 +115,7 @@ namespace engine {
             [[nodiscard]] static uint64_t getImm(const string& value);
             [[nodiscard]] static DataType getImmType(const string& value);
             [[nodiscard]] static bool isDataType(const Token& token);
+            [[nodiscard]] static const DeclareVariable* getArg(const DeclareFunction* function, const string& name);
 
         private:
 

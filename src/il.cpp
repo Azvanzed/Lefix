@@ -158,7 +158,13 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
     switch (src.type)
     {
     case TOKEN_TYPE_IDENTIFIER: {
-        ret.var = FindVariable(function, src.value);
+        if (const DeclareVariable* arg = getArg(function, src.value)) {
+            *(uint8_t*)&((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
+             ret.var = arg;
+        }
+        else {
+            ret.var = FindVariable(function, src.value);
+        }
 
         if (ret.function->ret_type == DATA_TYPE_STR) {
             ASSERT(ret.var->type == DATA_TYPE_STR, "Expected string type at return statement of '%s'", function->name.data());
@@ -215,8 +221,19 @@ engine::DataType engine::IL::getImmType(const string& value) {
     CRASH("Unknown integer type");
 }
 
-[[nodiscard]] bool engine::IL::isDataType(const Token& token) {
+bool engine::IL::isDataType(const Token& token) {
     return token.type == TOKEN_TYPE_KEYWORD && DATA_TYPES.find(token.value) != DATA_TYPES.end();
+}
+
+
+const engine::DeclareVariable* engine::IL::getArg(const DeclareFunction* function, const string& name) {
+    for (const DeclareVariable& arg : function->args) {
+        if (arg.name == name) {
+            return &arg;
+        }
+    }
+
+    return nullptr;
 }
 
 pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareFunction* function, const Token& token) const {
@@ -232,7 +249,14 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
         switch (right.type)
         {
             case TOKEN_TYPE_IDENTIFIER: {
-                set.right = FindVariable(function, right.value);
+                if (const DeclareVariable* arg = getArg(function, right.value)) {
+                    *(uint8_t*)&((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
+                    set.right = arg;
+                }
+                else {
+                    set.right = FindVariable(function, right.value);
+                }
+                
                 if (set.left->type == DATA_TYPE_STR) {
                     ASSERT(set.right->type == DATA_TYPE_STR, "Expected string type");
                 } else {
@@ -352,6 +376,7 @@ engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* functio
 
     DeclareVariable* var = new DeclareVariable();
     var->function = function;
+    var->flags = VAR_FLAGS_NONE;
     
     if (isDataType(Move(token, -1)) == true) {
         var->type = DATA_TYPES.at(Move(token, -1).value);

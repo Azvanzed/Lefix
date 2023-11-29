@@ -89,8 +89,19 @@ void engine::Assembler::assemble() {
         return size;
     };
 
-    const auto getStackOffset = [&](const DeclareVariable* var) -> size_t {
-        size_t offset = 0;
+    const auto getStackOffset = [&](const DeclareVariable* var) -> int64_t {
+        if (var->flags & VAR_FLAGS_ARG) {
+            size_t arg_offset = 0;
+            for (const DeclareVariable& arg : function->args) {
+                if (arg.name == var->name) {
+                    return getLocalsSize() + arg_offset + 8;
+                }
+
+                arg_offset += arg.size / 8;
+            }
+        }
+
+        int64_t offset = 0;
         for (const auto& [v, o] : stack) {
             if (v == var) {
                 return offset;
@@ -127,7 +138,7 @@ void engine::Assembler::assemble() {
             } break;
             case IL_TYPE_EQ_SET: {
                 const EQSet* data = (EQSet*)&il->data;
-
+                
                 if (data->right->value.empty() == false) {
                     mov("rax", to_string(IL::getImm(data->right->value)));
                     mov("[rsp+" + to_string(getStackOffset(data->left)) + "]", "rax");

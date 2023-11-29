@@ -1,9 +1,8 @@
-fn u32 some_other_function(u32 image_handle, u64 a2, u64 a3) {
+fn u64 other() {
     ret 32;
 }
 
-fn u8 _start(u64 image_handle, str some_other_argument, u32 lol, u64 maybe_not_xD, u8 lol) {
-    u32 test = 128;
-    some_other_function(16, 32, test);
+fn u64 _start() {
+    other();
     ret 64;
 }
