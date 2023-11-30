@@ -11,8 +11,9 @@
 
 using namespace std;
 
-engine::Tokenizer::Tokenizer(const string& code) {
-    m_code = move(code);
+engine::Tokenizer::Tokenizer(const string& code) 
+                            : m_code(move(code)) {
+    m_tokens.clear();
 }
 
 engine::Tokenizer::~Tokenizer() {
@@ -31,16 +32,14 @@ void engine::Tokenizer::cleanup() {
     return dis(gen);
 }
 
-vector<engine::Token> engine::Tokenizer::tokenize() const {
+void engine::Tokenizer::tokenize() {
     const static string operators = "=}+-*/%^&|~!<>";
 
-    vector<Token> tokens;
-    
     auto addToken = [&](size_t* i, TokenType type, size_t length = 1) {
         string value = m_code.substr(*i, length);
         uint64_t id = getRandomId();
 
-        tokens.emplace_back(id, type, value);
+        m_tokens.emplace_back(id, type, value);
         *i += length;
     };
 
@@ -83,6 +82,8 @@ vector<engine::Token> engine::Tokenizer::tokenize() const {
             addToken(&i, TOKEN_TYPE_UNKNOWN, j - i);
         }
     }
+}
 
-    return tokens;
+const vector<engine::Token>& engine::Tokenizer::getTokens() const {
+    return move(m_tokens);
 }

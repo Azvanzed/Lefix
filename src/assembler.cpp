@@ -9,206 +9,266 @@ using namespace std;
 engine::Assembler::Assembler() {
 }
 
-engine::Assembler::Assembler(const vector<IL_Instruction*>& ils) 
+engine::Assembler::Assembler(const vector<const IL_Instruction*>& ils) 
     : m_ils(move(ils)){
 }
 
 engine::Assembler::~Assembler() {
 }
 
-void engine::Assembler::label(const string& name) {
-    m_output += name + ":\n";
+void engine::Assembler::global(const string& name, const string& comment) {
+    m_output += "global " + name + ";";
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::add(const string& dst, const string& src) {
-    m_output += "\tadd " + dst + ", " + src + "\n";
+void engine::Assembler::label(const string& name, const string& comment) {
+    m_output += name + ":";
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::sub(const string& dst, const string& src) {
-    m_output += "\tsub " + dst + ", " + src + "\n";
+void engine::Assembler::add(const string& dst, const string& src, const string& comment) {
+    m_output += "\tadd " + dst += ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::mov(const string& dst, const string& src) {
-    m_output += "\tmov " + dst + ", " + src + "\n";
+void engine::Assembler::sub(const string& dst, const string& src, const string& comment) {
+    m_output += "\tsub " + dst += ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::push(const string& src) {
-    m_output += "\tpush " + src + "\n";
+void engine::Assembler::mov(const string& dst, const string& src, const string& comment) {
+    m_output += "\tmov " + dst += ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::pop(const string& dst) {
-    m_output += "\tpop " + dst + "\n";
+void engine::Assembler::push(const string& src, const string& comment) {
+    m_output += "\tpush " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::call(const string& dst) {
-    m_output += "\tcall " + dst + "\n";
+void engine::Assembler::pop(const string& dst, const string& comment) {
+    m_output += "\tpop " + dst;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::ret() {
-    m_output += "\tret\n";
+void engine::Assembler::call(const string& dst, const string& comment) {
+    m_output += "\tcall " + dst;
+    
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
 }
 
-void engine::Assembler::_int(const string& value) {
-    m_output += "\tint " + value + "\n";
+void engine::Assembler::_ret(const string& comment) {
+    m_output += "\tret";
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+void engine::Assembler::_int(const string& value, const string& comment) {
+    m_output += "\tint " + value;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+string engine::Assembler::getTypeOfSize(size_t size) {
+    switch (size) {
+        case 8: return "byte";
+        case 16: return "word";
+        case 32: return "dword";
+        case 64: return "qword";
+        default: CRASH("Unknown type size"); return "qword";
+    }
+}
+
+void engine::Assembler::translate() {
+    for (const IL_Instruction* il : m_ils) {
+        switch (il->type) {
+            case IL_TYPE_DECLARE_FUNCTION: {
+                const DeclareFunction* func = (const DeclareFunction*)&il->data;
+
+                AsmRoutine* routine = new AsmRoutine;
+                routine->name = func->name;
+                routine->stack_size = 0;
+                routine->stack.clear();
+                routine->insns.clear();
+                
+                vector<const DeclareVariable*> vars;
+                for (const DeclareVariable& arg : func->args) {
+                    vars.push_back(&arg);
+                }
+                
+                for (const IL_Instruction* il : m_ils) {
+                    if (il->type == IL_TYPE_DECLARE_VARIABLE) {
+                        const DeclareVariable* var = &get<DeclareVariable>(il->data);
+                        if (var->function == func) {
+                            vars.push_back(var);
+                        }
+                    }
+                }
+
+                for (const DeclareVariable* var : vars) {
+                    AsmLocal* local = new AsmLocal;
+                    local->size = var->size / 8;
+                    local->type = var->value.empty() == false ? ASM_LOCAL_TYPE_IMMEDIATE : ASM_LOCAL_TYPE_NONE; 
+                    local->offset = routine->stack_size;
+
+                    switch (local->type) {
+                        case ASM_LOCAL_TYPE_IMMEDIATE: {
+                            switch (var->size)  {
+                                case 8: local->imm.b8 = IL::getImm(var->value); break;
+                                case 16: local->imm.b16 = IL::getImm(var->value); break;
+                                case 32: local->imm.b32 = IL::getImm(var->value); break;
+                                case 64: local->imm.b64 = IL::getImm(var->value); break;
+                                default: CRASH("Unknown type size"); break;
+                            }
+                            
+                        } break;
+                        default: break;
+                    }
+
+                    routine->stack.emplace(var, local);
+                    routine->stack_size += local->size;
+                }
+
+                for (const IL_Instruction* il : m_ils) {
+                    if (il->type != IL_TYPE_DECLARE_VARIABLE) {
+                        if (*(DeclareFunction**)&il->data == func) {
+                            routine->insns.push_back(il);
+                        }
+                    }
+                }
+                
+                m_routines.push_back(routine);
+                break;
+            } break;
+            default: break;
+        };
+    }
 }
 
 void engine::Assembler::assemble() {
-    DeclareFunction* function = nullptr;
-    vector<pair<const DeclareVariable*, size_t>> stack;
+    for (const AsmRoutine* routine : m_routines) {
+        // create a label for the function
+        label(routine->name);
 
-    const auto getStackSize = [&]() -> size_t {
-        size_t size = 0;
-        for (const auto& [var, offset] : stack) {
-            size += DATA_TYPE_SIZES.at(var->type);
-        }
-      
-        return size / 8;
-    };
+        // reserve stack for variables
+        sub("rsp", to_string(routine->stack_size), "reserve locals");
 
-    const auto getLocalsSize = [&]() -> size_t {
-        size_t size = 0;
-
-        for (const IL_Instruction* il : m_ils) {
-            const DeclareVariable* var = (DeclareVariable*)&il->data;
-                
-            if (var->function == function && il->type == IL_TYPE_DECLARE_VARIABLE) {
-                size += var->size / 8;
-            }
-        }
-        
-        return size;
-    };
-
-    const auto getArgsSize = [](const DeclareFunction* function) -> size_t {
-        size_t size = 0;
-
-        for (const DeclareVariable& arg : function->args) {
-            size += arg.size / 8;
-        }
-        
-        return size;
-    };
-
-    const auto getStackOffset = [&](const DeclareVariable* var) -> int64_t {
-        if (var->flags & VAR_FLAGS_ARG) {
-            size_t arg_offset = 0;
-            for (const DeclareVariable& arg : function->args) {
-                if (arg.name == var->name) {
-                    return getLocalsSize() + arg_offset + 8;
-                }
-
-                arg_offset += arg.size / 8;
-            }
-        }
-
-        int64_t offset = 0;
-        for (const auto& [v, o] : stack) {
-            if (v == var) {
-                return offset;
-            }
-
-            offset += v->size / 8;
-        }
-
-        CRASH("variable not found");
-        return 0;
-    };
-
-    m_output += "global _start\n\n";
-    
-    for (const IL_Instruction* il : m_ils) {
-        ASSERT(il != nullptr, "il is null");
-
-        switch (il->type) {
-            case IL_TYPE_DECLARE_FUNCTION: {
-                function = (DeclareFunction*)&il->data;
-                
-                label(function->name);
-                
-                stack.clear();
-
-                if (function->name == "_start") {
-                    // entry arguments for uefi
-                    mov("[rsp+8]", "rcx");
-                    mov("[rsp+16]", "rdx");
-                }
-
-                size_t locals_size = getLocalsSize();
-                if (locals_size > 0) {
-                    sub("rsp", to_string(locals_size));
-                }
-            } break;
-            case IL_TYPE_DECLARE_VARIABLE: {
-                const DeclareVariable* data = (DeclareVariable*)&il->data;
-                stack.emplace_back(data, getStackSize());
-            } break;
+        // assemble instructions
+        for (const IL_Instruction* insn : routine->insns) {
+            switch (insn->type)
+            {
             case IL_TYPE_EQ_SET: {
-                const EQSet* data = (EQSet*)&il->data;
-            
-                if (data->right->value.empty() == false) {
-                    mov("rax", to_string(IL::getImm(data->right->value)));
-                    mov("[rsp+" + to_string(getStackOffset(data->left)) + "]", "rax");
+                const EQSet* data = &get<EQSet>(insn->data);
+                printf("EQ_SET (%s = %s)\n", data->left->name.data(), data->right->name.data());
+                
+                const AsmLocal* left_stack = routine->stack.at(data->left);
+                
+                if (data->right->flags & VAR_FLAGS_IMMEDIATE) {
+                    mov("rax", to_string(IL::getImm(data->right->value)), data->right->name);
                 }
                 else {
-                    mov("rax", "[rsp+" + to_string(getStackOffset(data->right)) + "]");
-                    mov("[rsp+" + to_string(getStackOffset(data->left)) + "]", "rax");
+                    const AsmLocal* right_stack = routine->stack.at(data->right);
+                   
+                    int64_t offset = right_stack->offset;
+                    if (data->right->flags & VAR_FLAGS_ARG) {
+                        offset += routine->stack_size + 8;
+                    }
+                
+                    mov("rax", "[rsp+" + to_string(offset) + "]", data->right->name);
                 }
+
+                mov("[rsp+" + to_string(left_stack->offset) + "]", "rax", data->left->name);
             } break;
             case IL_TYPE_FUNC_CALL: {
-                const FunctionCall* data = (FunctionCall*)&il->data;
+                printf("FUNC_CALL\n");
+
+                const FunctionCall* data = &get<FunctionCall>(insn->data);
                 
-                if (data->args.empty() == false) {
-                    sub("rsp", to_string(getArgsSize(data->callee)));
+                for (const DeclareVariable* arg : data->args) {
+                    printf("pushing %s\n", arg->name.data());
 
-                    size_t arg_offset = 0;
-                    for (size_t i = 0; i < data->args.size(); i++) {
-                        const DeclareVariable* arg = data->args[i];
-                        const DeclareVariable* callee_arg = &data->callee->args[i];
-
-                        if (arg->value.empty() == false) {
-                            mov("rax", to_string(IL::getImm(arg->value)));
-                            mov("[rsp+" + to_string(arg_offset) + "]", "rax");
-                        }
-                        else {
-                            mov("rax", "[rsp+" + to_string(getStackOffset(arg)) + "]");
-                            mov("[rsp+" + to_string(arg_offset) + "]", "rax");
-                        }
-
-                        arg_offset += callee_arg->size / 8; 
+                    if (arg->flags & VAR_FLAGS_IMMEDIATE) {
+                        push(getTypeOfSize(arg->size) + " " + to_string(IL::getImm(arg->value)), arg->name);
+                    }
+                    else {
+                        const AsmLocal* right_stack = routine->stack.at(arg);
+                        push(getTypeOfSize(arg->size) + " [rsp+" + to_string(right_stack->offset) + "]",  arg->name);
                     }
                 }
 
                 call(data->callee->name);
             } break;
             case IL_TYPE_RETURN: {
-                const FunctionReturn* data = (FunctionReturn*)&il->data;
+                printf("RETURN\n");
 
-                if (data->var->value.empty() == false) {
-                    mov("rax", to_string(IL::getImm(data->var->value)));
-                }
-                else {
-                    mov("rax", "[rsp+" + to_string(getStackOffset(data->var)) + "]");
-                }
+                const FunctionReturn* data = &get<FunctionReturn>(insn->data);
+                const AsmLocal* ret_stack = routine->stack.at(data->var);
+                
+                mov("rax", "[rsp+" + to_string(ret_stack->offset) + "]", data->var->name);
 
-                size_t stack_size = getStackSize();
-                if (stack_size > 0) {
-                    add("rsp", to_string(stack_size));
-                }
-
-                if (function->name == "_start") { // exit process syscall for testing
-                    mov("rbx", "rax");
-                    mov("rax", "1");
-                    _int("80h");
-                }
-                else {
-                    ret();
-                }
-
-                m_output += "\n";
+                add("rsp", to_string(routine->stack_size), "free locals");
+                _ret();
             } break;
             default: break;
+            }
         }
     }
+
+    global("_start", "for testing");
+    label("_start");
+    push("rcx", "ImageHandle");
+    push("rdx", "SystemTable");
+    call("efi_main");
+    mov("rbx", "rax", "exit code");
+    mov("rax", "1", "sys_exit");
+    _int("0x80");
 }
 
 void engine::Assembler::create(const string& filename) const {

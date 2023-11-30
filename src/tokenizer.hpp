@@ -50,12 +50,16 @@ namespace engine {
             ~Tokenizer();
 
             void cleanup();
-            [[nodiscard]] vector<Token> tokenize() const;
+            void tokenize();
+
+            [[nodiscard]] const vector<Token>& getTokens() const;
             
         private:    
             
             [[nodiscard]] static uint16_t getRandomId();
 
+            
+            vector<Token> m_tokens;
             string m_code;
     };
 }

@@ -4,3 +4,7 @@ example/*
 !example/main.asm
 !example/main.lx
 bin/*
+
+# Added by cargo
+
+/target

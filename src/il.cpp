@@ -13,7 +13,7 @@ engine::IL::IL(const vector<Token>& tokens) {
 }
 
 engine::IL::~IL() {
-    for (IL_Instruction* insn : m_ils) {
+    for (const IL_Instruction* insn : m_ils) {
         delete insn;
     }
 }
@@ -66,7 +66,7 @@ void engine::IL::optimize() {
     // TODO
 }
 
-vector<engine::IL_Instruction*> engine::IL::getILs() const {
+const vector<const engine::IL_Instruction*>& engine::IL::getILs() const {
     return move(m_ils);
 }
 
@@ -143,6 +143,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeDeclareVariable(const D
     var.type = DATA_TYPES.at(token.value);
     var.size = DATA_TYPE_SIZES.at(var.type);
     var.name = Move(token, 1).value;
+    var.flags = VAR_FLAGS_NONE;
     var.value = "";
     return { CreateIL(IL_TYPE_DECLARE_VARIABLE, var), 2 };    
 }
@@ -159,8 +160,8 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
     {
     case TOKEN_TYPE_IDENTIFIER: {
         if (const DeclareVariable* arg = getArg(function, src.value)) {
-            *(uint8_t*)&((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
-             ret.var = arg;
+            ((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
+            ret.var = arg;
         }
         else {
             ret.var = FindVariable(function, src.value);
@@ -244,13 +245,14 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
         const Token& right = Move(token, 1);
 
         EQSet set;
+        set.function = function;
         set.left = FindVariable(function, left.value);
 
         switch (right.type)
         {
             case TOKEN_TYPE_IDENTIFIER: {
                 if (const DeclareVariable* arg = getArg(function, right.value)) {
-                    *(uint8_t*)&((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
+                    ((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
                     set.right = arg;
                 }
                 else {
@@ -263,7 +265,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
                     ASSERT(set.right->type != DATA_TYPE_STR, "Expected number type");
                 }
 
-                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' > '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
             } break;
             case TOKEN_TYPE_STRING: {
                 set.right = MakeVariable(function, right);
@@ -272,7 +274,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
             case TOKEN_TYPE_NUMBER: {
                 set.right = MakeVariable(function, right);
                 ASSERT(set.left->type != DATA_TYPE_STR, "Expected string type");
-                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' > '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
             } break;
             default:
                 ASSERT(false, "Unexpected token type");
@@ -366,7 +368,14 @@ const engine::DeclareVariable* engine::IL::FindVariable(const DeclareFunction* f
             }
         }
     }
+    
+    for (const DeclareVariable& arg : function->args) {
+        if (arg.name == name) {
+            return &arg;
+        }
+    }
 
+    ASSERT(false, "Variable '%s' not found within '%s'", name.data(), function->name.data());
     return nullptr;
 }
 
@@ -383,12 +392,14 @@ engine::DeclareVariable* engine::IL::MakeVariable(const DeclareFunction* functio
         var->name = Move(token, 1).value;
     }
     else {
+        var->flags |= VAR_FLAGS_IMMEDIATE;
         var->name = "var_" + to_string(getRandomId());
 
         switch (token.type)
         {
         case TOKEN_TYPE_STRING: {
             var->type = DATA_TYPE_STR;
+;
             var->value = token.value.substr(1, token.value.size() - 2);
         } break;
         case TOKEN_TYPE_NUMBER: {

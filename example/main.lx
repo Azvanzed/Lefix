@@ -1,9 +1,15 @@
-fn u64 other(u64 lmfao) {
-
-    ret 32;
+fn u64 other(u64 c) {
+    ret c;
 }
 
-fn u64 _start(u64 image_handle, u64 st) {
-    u64 test = image_handle;
-    ret test;
+fn u64 efi_main(u64 image_handle, u64 st) {
+    other(128);
+
+    u64 test = 32;
+
+    u64 i_swear = 128332;
+    test = i_swear;
+    i_swear = image_handle;
+
+    ret i_swear;
 }

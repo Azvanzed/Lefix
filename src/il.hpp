@@ -23,6 +23,7 @@ namespace engine {
     enum VarFlags {
         VAR_FLAGS_NONE = 0,
         VAR_FLAGS_ARG = (1 << 0),
+        VAR_FLAGS_IMMEDIATE = (1 << 1),
     };
 
     const static unordered_map<string, DataType> DATA_TYPES = {
@@ -57,7 +58,7 @@ namespace engine {
         size_t size;
         string name;
         string value;
-        VarFlags flags;
+        uint8_t flags;
     };
 
     struct DeclareFunction {
@@ -72,6 +73,7 @@ namespace engine {
     };
 
     struct EQSet {
+        const DeclareFunction* function;
         const DeclareVariable* left;
         const DeclareVariable* right;
     };
@@ -109,7 +111,7 @@ namespace engine {
             void analyze();
             void optimize();
             
-            vector<IL_Instruction*> getILs() const;
+            [[nodiscard]] const vector<const IL_Instruction*>& getILs() const;
             
             [[nodiscard]] static uint16_t getRandomId();
             [[nodiscard]] static uint64_t getImm(const string& value);
@@ -134,7 +136,7 @@ namespace engine {
             [[nodiscard]] DeclareVariable* MakeVariable(const DeclareFunction* function, const Token& token) const;
 
             vector<Token> m_tokens;
-            vector<IL_Instruction*> m_ils;
+            vector<const IL_Instruction*> m_ils;
     };
 }
 

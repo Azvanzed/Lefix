@@ -14,17 +14,14 @@ int main() {
     
     engine::Tokenizer tokenizer(code);
     tokenizer.cleanup();
-    auto tokens = tokenizer.tokenize();
+    tokenizer.tokenize();
 
-    printf("got %ld tokens\n", tokens.size());
-
-    engine::IL il(tokens);
+    engine::IL il(tokenizer.getTokens());
     il.analyze();
     il.optimize();
 
-    printf("got %ld ils\n", il.getILs().size());
-
     engine::Assembler assembler(il.getILs());
+    assembler.translate();
     assembler.assemble();
     assembler.create("example/main.asm");
 
