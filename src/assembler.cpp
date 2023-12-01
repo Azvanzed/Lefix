@@ -273,12 +273,13 @@ void engine::Assembler::assemble() {
 
                 const FunctionReturn* data = &get<FunctionReturn>(insn->data);
                 const DeclareVariable* var = data->var;
-                const AsmLocal* var_stack = routine->stack.at(var);
                 
                 const string& gp0 = getGP0(var->size);
                 const string& mem = getMemSize(var->size);
 
                 if (!(var->flags & VAR_FLAGS_IMMEDIATE)) {
+                    const AsmLocal* var_stack = routine->stack.at(var);
+
                     int64_t offset = var_stack->offset;
                     if (var->flags & VAR_FLAGS_ARG) {
                         offset += routine->stack_size + 8;

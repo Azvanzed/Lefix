@@ -1,6 +1,6 @@
 efi_main:
 	sub rsp, 16 ; reserve locals
-	mov rax, qword [rsp+32] ; st
+	mov al, 32 ; var_3614
 	add rsp, 16 ; free locals
 	ret
 global _start; ; for testing
