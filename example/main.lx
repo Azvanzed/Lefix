@@ -1,15 +1,9 @@
 fn u64 other(u64 c) {
-    ret c;
+    u8 test2 = 2;
+    ret test2;
 }
 
 fn u64 efi_main(u64 image_handle, u64 st) {
-    other(128);
-
-    u64 test = 32;
-
-    u64 i_swear = 128332;
-    test = i_swear;
-    i_swear = image_handle;
-
-    ret i_swear;
+    u8 test = 64;
+    ret test;
 }

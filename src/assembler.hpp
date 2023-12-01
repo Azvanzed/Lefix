@@ -60,7 +60,8 @@ namespace engine {
             void _ret(const string& comment = "");
             void _int(const string& value, const string& comment = "");
 
-            [[nodiscard]] static string getTypeOfSize(size_t size);
+            [[nodiscard]] static string getMemSize(size_t size);
+            [[nodiscard]] static string getGP0(size_t size);
 
         private:
             string m_output;

@@ -116,13 +116,23 @@ void engine::Assembler::_int(const string& value, const string& comment) {
     m_output += "\n";
 }
 
-string engine::Assembler::getTypeOfSize(size_t size) {
+string engine::Assembler::getMemSize(size_t size) {
     switch (size) {
         case 8: return "byte";
         case 16: return "word";
         case 32: return "dword";
         case 64: return "qword";
         default: CRASH("Unknown type size"); return "qword";
+    }
+}
+
+string engine::Assembler::getGP0(size_t size) {
+    switch (size) {
+        case 8: return "al";
+        case 16: return "ax";
+        case 32: return "eax";
+        case 64: return "rax";
+        default: CRASH("Unknown type size"); return "rax";
     }
 }
 
@@ -209,41 +219,48 @@ void engine::Assembler::assemble() {
                 printf("EQ_SET (%s = %s)\n", data->left->name.data(), data->right->name.data());
                 
                 const AsmLocal* left_stack = routine->stack.at(data->left);
-                
-                if (data->right->flags & VAR_FLAGS_IMMEDIATE) {
-                    mov("rax", to_string(IL::getImm(data->right->value)), data->right->name);
-                }
-                else {
-                    const AsmLocal* right_stack = routine->stack.at(data->right);
                    
+                const string& mem = getMemSize(data->right->size);
+                const string& gp0 = getGP0(data->right->size);
+
+                if (!(data->right->flags & VAR_FLAGS_IMMEDIATE)) {
+                    const AsmLocal* right_stack = routine->stack.at(data->right);
+                  
                     int64_t offset = right_stack->offset;
                     if (data->right->flags & VAR_FLAGS_ARG) {
                         offset += routine->stack_size + 8;
                     }
                 
-                    mov("rax", "[rsp+" + to_string(offset) + "]", data->right->name);
+                    mov(gp0, mem + " [rsp+" + to_string(offset) + "]", data->right->name);
+                }
+                else {
+                    mov(gp0, to_string(IL::getImm(data->right->value)), data->right->name);
                 }
 
-                mov("[rsp+" + to_string(left_stack->offset) + "]", "rax", data->left->name);
+                mov(mem + " [rsp+" + to_string(left_stack->offset) + "]", gp0, data->left->name);
             } break;
             case IL_TYPE_FUNC_CALL: {
                 printf("FUNC_CALL\n");
 
                 const FunctionCall* data = &get<FunctionCall>(insn->data);
                 
+                size_t stack_size = 0;
                 for (const DeclareVariable* arg : data->args) {
-                    printf("pushing %s\n", arg->name.data());
+                    const string& mem = getMemSize(arg->size);
 
                     if (arg->flags & VAR_FLAGS_IMMEDIATE) {
-                        push(getTypeOfSize(arg->size) + " " + to_string(IL::getImm(arg->value)), arg->name);
+                        push(mem + " " + to_string(IL::getImm(arg->value)), arg->name);
                     }
                     else {
                         const AsmLocal* right_stack = routine->stack.at(arg);
-                        push(getTypeOfSize(arg->size) + " [rsp+" + to_string(right_stack->offset) + "]",  arg->name);
+                        push(mem + " [rsp+" + to_string(right_stack->offset) + "]",  arg->name);
                     }
+
+                    stack_size += arg->size / 8;
                 }
 
                 call(data->callee->name);
+                add("rsp", to_string(stack_size), "free args");
             } break;
             case IL_TYPE_RETURN: {
                 printf("RETURN\n");
@@ -251,7 +268,10 @@ void engine::Assembler::assemble() {
                 const FunctionReturn* data = &get<FunctionReturn>(insn->data);
                 const AsmLocal* ret_stack = routine->stack.at(data->var);
                 
-                mov("rax", "[rsp+" + to_string(ret_stack->offset) + "]", data->var->name);
+                const string& gp0 = getGP0(data->var->size);
+                const string& mem = getMemSize(data->var->size);
+
+                mov(gp0, mem + " [rsp+" + to_string(ret_stack->offset) + "]", data->var->name);
 
                 add("rsp", to_string(routine->stack_size), "free locals");
                 _ret();
