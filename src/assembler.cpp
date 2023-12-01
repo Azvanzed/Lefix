@@ -216,44 +216,50 @@ void engine::Assembler::assemble() {
             {
             case IL_TYPE_EQ_SET: {
                 const EQSet* data = &get<EQSet>(insn->data);
-                printf("EQ_SET (%s = %s)\n", data->left->name.data(), data->right->name.data());
                 
-                const AsmLocal* left_stack = routine->stack.at(data->left);
-                   
-                const string& mem = getMemSize(data->right->size);
-                const string& gp0 = getGP0(data->right->size);
+                const DeclareVariable* left = data->left;
+                const DeclareVariable* right = data->right;
+                printf("EQ_SET (%s = %s)\n",left->name.data(), right->name.data());
+  
+                const string& mem = getMemSize(right->size);
+                const string& gp0 = getGP0(right->size);
 
-                if (!(data->right->flags & VAR_FLAGS_IMMEDIATE)) {
-                    const AsmLocal* right_stack = routine->stack.at(data->right);
+                if (!(right->flags & VAR_FLAGS_IMMEDIATE)) {
+                    const AsmLocal* right_stack = routine->stack.at(right);
                   
                     int64_t offset = right_stack->offset;
-                    if (data->right->flags & VAR_FLAGS_ARG) {
+                    if (right->flags & VAR_FLAGS_ARG) {
                         offset += routine->stack_size + 8;
                     }
-                
-                    mov(gp0, mem + " [rsp+" + to_string(offset) + "]", data->right->name);
+
+                    // read from var within the stack
+                    mov(gp0, mem + " [rsp+" + to_string(offset) + "]", right->name);
                 }
                 else {
-                    mov(gp0, to_string(IL::getImm(data->right->value)), data->right->name);
+                    // write to gp0 reg imm value
+                    mov(gp0, to_string(IL::getImm(right->value)), right->name);
                 }
 
-                mov(mem + " [rsp+" + to_string(left_stack->offset) + "]", gp0, data->left->name);
+                // write to var within the stack
+                const AsmLocal* left_stack = routine->stack.at(left);
+                mov(mem + " [rsp+" + to_string(left_stack->offset) + "]", gp0, left->name);
             } break;
             case IL_TYPE_FUNC_CALL: {
-                printf("FUNC_CALL\n");
-
                 const FunctionCall* data = &get<FunctionCall>(insn->data);
                 
                 size_t stack_size = 0;
                 for (const DeclareVariable* arg : data->args) {
                     const string& mem = getMemSize(arg->size);
 
-                    if (arg->flags & VAR_FLAGS_IMMEDIATE) {
-                        push(mem + " " + to_string(IL::getImm(arg->value)), arg->name);
+                    if (!(arg->flags & VAR_FLAGS_IMMEDIATE)) {
+                        const AsmLocal* right_stack = routine->stack.at(arg);
+
+                        // push value within var from stack
+                        push(mem + " [rsp+" + to_string(right_stack->offset) + "]",  arg->name);
                     }
                     else {
-                        const AsmLocal* right_stack = routine->stack.at(arg);
-                        push(mem + " [rsp+" + to_string(right_stack->offset) + "]",  arg->name);
+                        // push immediate value
+                        push(mem + " " + to_string(IL::getImm(arg->value)), arg->name);
                     }
 
                     stack_size += arg->size / 8;
@@ -266,12 +272,25 @@ void engine::Assembler::assemble() {
                 printf("RETURN\n");
 
                 const FunctionReturn* data = &get<FunctionReturn>(insn->data);
-                const AsmLocal* ret_stack = routine->stack.at(data->var);
+                const DeclareVariable* var = data->var;
+                const AsmLocal* var_stack = routine->stack.at(var);
                 
-                const string& gp0 = getGP0(data->var->size);
-                const string& mem = getMemSize(data->var->size);
+                const string& gp0 = getGP0(var->size);
+                const string& mem = getMemSize(var->size);
 
-                mov(gp0, mem + " [rsp+" + to_string(ret_stack->offset) + "]", data->var->name);
+                if (!(var->flags & VAR_FLAGS_IMMEDIATE)) {
+                    int64_t offset = var_stack->offset;
+                    if (var->flags & VAR_FLAGS_ARG) {
+                        offset += routine->stack_size + 8;
+                    }
+
+                    // read from var within the stack
+                    mov(gp0, mem + " [rsp+" + to_string(offset) + "]", var->name);
+                }
+                else {
+                    // write to gp0 reg imm value
+                    mov(gp0, to_string(IL::getImm(var->value)), var->name);
+                }
 
                 add("rsp", to_string(routine->stack_size), "free locals");
                 _ret();
@@ -283,9 +302,12 @@ void engine::Assembler::assemble() {
 
     global("_start", "for testing");
     label("_start");
-    push("rcx", "ImageHandle");
+    mov("rcx", "69"); 
+    mov("rdx", "96"); 
     push("rdx", "SystemTable");
+    push("rcx", "ImageHandle");
     call("efi_main");
+    add("rsp", "16", "free args");
     mov("rbx", "rax", "exit code");
     mov("rax", "1", "sys_exit");
     _int("0x80");

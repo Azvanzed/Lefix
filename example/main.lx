@@ -1,9 +1,3 @@
-fn u64 other(u64 c) {
-    u8 test2 = 2;
-    ret test2;
-}
-
 fn u64 efi_main(u64 image_handle, u64 st) {
-    u8 test = 64;
-    ret test;
+    ret st;
 }
