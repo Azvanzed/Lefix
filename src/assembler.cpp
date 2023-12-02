@@ -183,7 +183,6 @@ void engine::Assembler::translate() {
                     local->size = var->size / 8;
                     local->type = var->value.empty() == false ? ASM_LOCAL_TYPE_IMMEDIATE : ASM_LOCAL_TYPE_NONE; 
                     local->offset = AlignStack(routine->stack_size, local->size);
-                    printf("offset: %ld\n", local->offset);
 
                     switch (local->type) {
                         case ASM_LOCAL_TYPE_IMMEDIATE: {
