@@ -268,6 +268,10 @@ void engine::Assembler::assemble() {
                 size_t stack_size = 0;
                 for (const DeclareVariable* arg : data->args) {
                     const string& mem = getMemSize(arg->size);
+                    const string& gp0 = getGP0(arg->size);
+
+                    // resreve space for the var
+                    sub("rsp", to_string(arg->size / 8), "reserve " + arg->name);
 
                     if (!(arg->flags & VAR_FLAGS_IMMEDIATE)) {
                         const AsmLocal* arg_stack = routine->stack.at(arg);
@@ -277,12 +281,12 @@ void engine::Assembler::assemble() {
                             arg_offset += routine->stack_size + 8;
                         }
 
-                        // push value within var from stack
-                        push(mem + " [rsp+" + to_string(arg_offset) + "]",  arg->name);
+                        mov(gp0, mem + " [rsp+" + to_string(arg_offset) + "]", arg->name);
+                        mov(mem + " [rsp]", gp0);
                     }
                     else {
-                        // push immediate value
-                        push(mem + " " + to_string(IL::getImm(arg->value)), arg->name);
+                        mov(gp0, to_string(IL::getImm(arg->value)), arg->name);
+                        mov(mem + " [rsp]", gp0);
                     }
 
                     stack_size += arg->size / 8;
@@ -290,9 +294,14 @@ void engine::Assembler::assemble() {
 
                 call(data->callee->name);
 
+                if (stack_size > 0) {
+                    add("rsp", to_string(stack_size), "free args");
+                }
+                
                 if (data->ret != nullptr) {
-                    const string& mem = getMemSize(data->ret->size);
-                    const string& gp0 = getGP0(data->ret->size);
+                    size_t ret_size = DATA_TYPE_SIZES.at(data->ret->type);
+                    const string& mem = getMemSize(ret_size);
+                    const string& gp0 = getGP0(ret_size);
 
                     const AsmLocal* ret_stack = routine->stack.at(data->ret);
 
@@ -305,9 +314,6 @@ void engine::Assembler::assemble() {
                     mov(mem + " [rsp+" + to_string(ret_offset) + "]", gp0, data->ret->name);
                 }
 
-                if (stack_size > 0) {
-                    add("rsp", to_string(stack_size), "free args");
-                }
             } break;
             case IL_TYPE_RETURN: {
                 printf("RETURN\n");
