@@ -46,6 +46,19 @@ void engine::IL::analyze() {
 
                     i += size - 1;
                 }
+                else if (token.value == "@") {
+                    auto [il, size] = AnalyzeMacro(function, token);
+                    m_ils.push_back(il);
+                    i += size - 1;
+                }
+                else if (token.value == "keep") {
+                    auto [ids, size] = AnalyzeKeep(function, token);
+                    for (uint64_t id : ids) {
+                        m_kept.push_back(id);
+                    }
+
+                    i += size - 1;
+                }
             } break;
             case TOKEN_TYPE_IDENTIFIER: {
                 if (Move(token, 1).type == TOKEN_TYPE_ARG_START) {
@@ -58,11 +71,6 @@ void engine::IL::analyze() {
             } break;
             case TOKEN_TYPE_OPERATOR: {
                 auto [il, size] = AnalyzeOperator(function, token);
-                m_ils.push_back(il);
-                i += size - 1;
-            } break;
-            case TOKEN_TYPE_MACRO: {
-                auto [il, size] = AnalyzeMacro(function, token);
                 m_ils.push_back(il);
                 i += size - 1;
             } break;
@@ -83,6 +91,10 @@ void engine::IL::optimize() {
     
     vector<const DeclareFunction*> unused_routines;
     for (const IL_Instruction* il : m_ils) {
+        if (find(m_kept.begin(), m_kept.end(), il->id) != m_kept.end()) {
+            continue;
+        }
+
         if (il->type == IL_TYPE_DECLARE_FUNCTION) {
             const DeclareFunction& fn = get<DeclareFunction>(il->data);
             if (fn.name != "efi_main" && find(used_routines.begin(), used_routines.end(), &fn) == used_routines.end()) {
@@ -301,17 +313,6 @@ bool engine::IL::isDataType(const Token& token) {
     return token.type == TOKEN_TYPE_KEYWORD && DATA_TYPES.find(token.value) != DATA_TYPES.end();
 }
 
-
-const engine::DeclareVariable* engine::IL::getArg(const DeclareFunction* function, const string& name) {
-    for (const DeclareVariable& arg : function->args) {
-        if (arg.name == name) {
-            return &arg;
-        }
-    }
-
-    return nullptr;
-}
-
 pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareFunction* function, const Token& token) const {
     ASSERT(Move(token, -1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier before '=' operator");
 
@@ -455,6 +456,44 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeMacro(const DeclareFunc
     return { nullptr, 2 };
 }
 
+pair<vector<uint64_t>, size_t> engine::IL::AnalyzeKeep(const DeclareFunction* function, const Token& token) const {
+    ASSERT(function != nullptr, "Expected function declaration before keep");
+    ASSERT(Move(token, 1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier after keep");
+
+    /* the syntax of a keep is like this:
+    keep ehhh;
+    keep ehhh0, ehhh1, ehhh2;
+    */
+
+    vector<uint64_t> ids;
+    size_t size = 1;
+
+    while (true) {
+        const Token& src = Move(token, size);
+
+        if (const DeclareVariable* var = FindVariable(function, src.value)) {
+            if (!(var->flags & VAR_FLAGS_IMMEDIATE)) {
+                const IL_Instruction* il = (const IL_Instruction*)((uint64_t)var - offsetof(IL_Instruction, data));
+                ids.push_back(il->id);
+            }
+        }
+        else if (const DeclareFunction* func = FindFunction(src.value)) {
+            const IL_Instruction* il = (const IL_Instruction*)((uint64_t)func - offsetof(IL_Instruction, data));
+            ids.push_back(il->id);
+        }
+        else {
+            CRASH("Identifier '%s' not found", src.value.data());
+        }
+
+        size += 2;
+        if (Move(src, 1).type != TOKEN_TYPE_NEW_ARG) {
+            break;
+        }
+    }
+
+    return { ids, size };
+}
+
 const engine::DeclareFunction* engine::IL::FindFunction(const string& name) const {
     for (const IL_Instruction* il : m_ils) {
         if (il->type == IL_TYPE_DECLARE_FUNCTION) {
@@ -486,7 +525,7 @@ const engine::DeclareVariable* engine::IL::FindVariable(const DeclareFunction* f
         }
     }
 
-    CRASH("Variable '%s' not found within '%s'", name.data(), function->name.data());
+    //CRASH("Variable '%s' not found within '%s'", name.data(), function->name.data());
     return nullptr;
 }
 

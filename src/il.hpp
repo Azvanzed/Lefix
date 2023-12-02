@@ -91,7 +91,7 @@ namespace engine {
         const DeclareFunction* function;
         string code;
     };
-    
+
     enum InstructionType {
         IL_TYPE_UNKNOWN,
         IL_TYPE_DECLARE_VARIABLE,
@@ -125,7 +125,6 @@ namespace engine {
             [[nodiscard]] static uint64_t getImm(const string& value);
             [[nodiscard]] static DataType getImmType(const string& value);
             [[nodiscard]] static bool isDataType(const Token& token);
-            [[nodiscard]] static const DeclareVariable* getArg(const DeclareFunction* function, const string& name);
 
         private:
 
@@ -138,15 +137,18 @@ namespace engine {
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeOperator(const DeclareFunction* function, const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeCall(const DeclareFunction* function, const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeMacro(const DeclareFunction* function, const Token& token) const;
+            [[nodiscard]] pair<vector<uint64_t>, size_t> AnalyzeKeep(const DeclareFunction* function, const Token& token) const;
 
             [[nodiscard]] const DeclareFunction* FindFunction(const string& name) const;
 
             [[nodiscard]] const DeclareVariable* FindVariable(const DeclareFunction* function, const string& name) const;
             [[nodiscard]] DeclareVariable* MakeVariable(const DeclareFunction* function, const Token& token) const;
 
+            [[nodiscard]] const IL_Instruction* FindIL(uint64_t id) const;
             
             vector<Token> m_tokens;
             vector<const IL_Instruction*> m_ils;
+            vector<uint64_t> m_kept;
     };
 }
 

@@ -48,8 +48,6 @@ void engine::Tokenizer::tokenize() {
 
         if (isspace(c)) {
             ++i;
-        } else if (c == '@') {
-            addToken(&i, TOKEN_TYPE_MACRO);
         } else if (c == '(' || c == ')') {
             addToken(&i, c == '(' ? TOKEN_TYPE_ARG_START : TOKEN_TYPE_ARG_END);
         } else if (c == ',') {
@@ -59,7 +57,6 @@ void engine::Tokenizer::tokenize() {
         } else if (c == '"') {
             size_t j = m_code.find('"', i + 1);
             ASSERT(j != string::npos, "Expected closing '\"'");
-
             addToken(&i, TOKEN_TYPE_STRING, j - i + 1);
         } else if (c == '0' && (i + 1 < m_code.size()) && m_code[i + 1] == 'x') {
             size_t j = i + 2;
