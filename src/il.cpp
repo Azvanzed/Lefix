@@ -24,7 +24,7 @@ void engine::IL::analyze() {
     
     for (size_t i = 0; i < m_tokens.size(); ++i) {
         const Token& token = m_tokens.at(i);
-
+       
         switch (token.type) {
             case TOKEN_TYPE_KEYWORD: {
                 if (token.value == "fn") {
@@ -44,11 +44,6 @@ void engine::IL::analyze() {
                         m_ils.push_back(il);
                     }
 
-                    i += size - 1;
-                }
-                else if (token.value == "@") {
-                    auto [il, size] = AnalyzeMacro(function, token);
-                    m_ils.push_back(il);
                     i += size - 1;
                 }
                 else if (token.value == "keep") {
@@ -74,7 +69,16 @@ void engine::IL::analyze() {
                 m_ils.push_back(il);
                 i += size - 1;
             } break;
+            case TOKEN_TYPE_MACRO: {
+                auto [il, size] = AnalyzeMacro(function, token);
+                m_ils.push_back(il);
+                i += size - 1;
+            } break;
             default: break;
+        }
+
+        if (m_tokens[i].type == TOKEN_TYPE_EOF) {
+            ++i;
         }
     }
 }
@@ -435,7 +439,6 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeMacro(const DeclareFunc
     ASSERT(function != nullptr, "Expected function declaration before macro");
     ASSERT(Move(token, 1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier after macro");
 
-
     if (Move(token, 1).value == "asm") {
         ASSERT(Move(token, 2).type == TOKEN_TYPE_ARG_START, "Expected '(' after asm macro");
         ASSERT(Move(token, 3).type == TOKEN_TYPE_STRING, "Expected string after asm macro");
@@ -449,7 +452,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeMacro(const DeclareFunc
         inline_asm.function = function;
         inline_asm.code = code;
         
-        return { CreateIL(IL_TYPE_INLINE_ASM, inline_asm), 6 };
+        return { CreateIL(IL_TYPE_INLINE_ASM, inline_asm), 5 };
     }
 
     CRASH("Unknown macro");
@@ -459,11 +462,6 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeMacro(const DeclareFunc
 pair<vector<uint64_t>, size_t> engine::IL::AnalyzeKeep(const DeclareFunction* function, const Token& token) const {
     ASSERT(function != nullptr, "Expected function declaration before keep");
     ASSERT(Move(token, 1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier after keep");
-
-    /* the syntax of a keep is like this:
-    keep ehhh;
-    keep ehhh0, ehhh1, ehhh2;
-    */
 
     vector<uint64_t> ids;
     size_t size = 1;

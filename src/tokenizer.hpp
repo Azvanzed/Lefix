@@ -19,6 +19,7 @@ namespace engine {
         TOKEN_TYPE_ARG_START,
         TOKEN_TYPE_ARG_END,
         TOKEN_TYPE_NEW_ARG,
+        TOKEN_TYPE_MACRO,
         TOKEN_TYPE_SCOPE_START,
         TOKEN_TYPE_SCOPE_END,
     };
@@ -32,7 +33,6 @@ namespace engine {
     const static unordered_map<string, TokenType> KEYWORDS = {
         { "ret", TOKEN_TYPE_KEYWORD },
         { "fn", TOKEN_TYPE_KEYWORD },
-        { "@", TOKEN_TYPE_KEYWORD },
         { "keep", TOKEN_TYPE_KEYWORD },
         { "i64", TOKEN_TYPE_KEYWORD },
         { "i32", TOKEN_TYPE_KEYWORD },

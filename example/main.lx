@@ -1,23 +1,11 @@
-fn u32 ehhh() {
-    ret 32;
-}
-
-fn u32 ehhh0() {
-    ret 64;
-}
-
-fn u32 ehhh1() {
-    ret 128;
-}
-
-fn u32 ehhh2() {
-    ret 192;
-}
-
 fn efi_main(u64 image_handle, u64 st) {
-    keep ehhh;
-    keep ehhh0, ehhh1;
+    u32 hehe = 25;
 
+    $asm("
+        mov rax, qword [@hehe]
+        add rsp, @stack_size
+        ret
+    ");
 
     ret;
 }

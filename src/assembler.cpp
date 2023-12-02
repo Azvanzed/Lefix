@@ -297,6 +297,8 @@ void engine::Assembler::optimize() {
     }
 }
 
+
+
 void engine::Assembler::assemble() {
     for (const AsmRoutine* routine : m_routines) {
         // create a label for the function
@@ -312,7 +314,38 @@ void engine::Assembler::assemble() {
             switch (insn->type)
             {
             case IL_TYPE_INLINE_ASM: {
-                const InlineAsm* data = &get<InlineAsm>(insn->data);
+                InlineAsm* data = (InlineAsm*)&get<InlineAsm>(insn->data);
+
+
+                for (size_t i = 0; i < data->code.size(); ++i) {
+                    if (data->code.substr(i, 11) == "@stack_size") {
+                        data->code.erase(i, 11);
+
+                        string stub = to_string(routine->stack_size) + " ; @stack_size";
+                        data->code.insert(i, stub);
+                        i += stub.size();
+                    } else if (data->code[i] == '@') {
+                        size_t start = i + 1;
+                        size_t end = start;
+                        while (end < data->code.size() && (isalnum(data->code[end]) || data->code[end] == '_')) {
+                            ++end;
+                        }
+
+                        for (const auto [var, local] : routine->stack) {
+                            if (var->name == data->code.substr(start, end - start)) {
+                                int64_t right_offset = local->offset;
+                                if (var->flags & VAR_FLAGS_ARG) {
+                                    right_offset += routine->stack_size + 8;
+                                }
+
+                                data->code.erase(i, end - start + 1);
+                                data->code.insert(i, + "rsp+" + to_string(right_offset));
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 insert(data->code, "Inlined assembly");
             } break;
             case IL_TYPE_EQ_SET: {

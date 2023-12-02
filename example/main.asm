@@ -1,13 +1,15 @@
-ehhh:
-	mov al, 32 ; var_54414
-	ret
-ehhh0:
-	mov al, 64 ; var_14720
-	ret
-ehhh1:
-	mov al, 128 ; var_33600
-	ret
 efi_main:
+	sub rsp, 20 ; reserve locals
+	mov al, 25 ; var_48598
+	mov byte [rsp+16], al ; hehe
+
+ ; Inlined assembly
+	mov rax, qword [@efi_main]
+	add rsp, 20 ; @stack_size
+	ret
+ ; Inlined assembly
+
+	add rsp, 20 ; free locals
 	ret
 global _start; ; for testing
 _start:

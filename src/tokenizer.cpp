@@ -50,6 +50,8 @@ void engine::Tokenizer::tokenize() {
             ++i;
         } else if (c == '(' || c == ')') {
             addToken(&i, c == '(' ? TOKEN_TYPE_ARG_START : TOKEN_TYPE_ARG_END);
+        }else if (c == '$') {
+            addToken(&i, TOKEN_TYPE_MACRO);
         } else if (c == ',') {
             addToken(&i, TOKEN_TYPE_NEW_ARG);
         } else if (c == '{' || c == '}') {
