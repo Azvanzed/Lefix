@@ -405,7 +405,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeMacro(const DeclareFunc
         inline_asm.function = function;
         inline_asm.code = code;
         
-        return { CreateIL(IL_TYPE_INLINE_ASM, inline_asm), 7 };
+        return { CreateIL(IL_TYPE_INLINE_ASM, inline_asm), 6 };
     }
 
     CRASH("Unknown macro");

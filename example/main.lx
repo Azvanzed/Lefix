@@ -1,15 +1,35 @@
+fn u64 smol_pause() {
+    @asm("
+        pause
+    ");
+
+    ret 0;
+}
+
 fn u64 other(u64 a1) {
     u8 hi = 32;
     u32 hey = 64;
 
+
     @asm("
-        mov rax, 6000
-        nop
-        nop
-        pause
+        push rcx
+        mov rcx, 40000000
+        .sleep:
+            test rcx, rcx
+            jz .leave
+
+            call smol_pause
+
+            dec rcx
+            jmp .sleep
+            
+        .leave:
+        pop rcx
     ");
 
     hey = hi;
+
+
     ret hey;
 }
 
