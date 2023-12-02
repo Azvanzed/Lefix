@@ -16,6 +16,7 @@ namespace engine {
         TOKEN_TYPE_NUMBER,
         TOKEN_TYPE_EOF,
         TOKEN_TYPE_OPERATOR,
+        TOKEN_TYPE_MACRO,
         TOKEN_TYPE_ARG_START,
         TOKEN_TYPE_ARG_END,
         TOKEN_TYPE_NEW_ARG,

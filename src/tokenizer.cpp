@@ -48,6 +48,8 @@ void engine::Tokenizer::tokenize() {
 
         if (isspace(c)) {
             ++i;
+        } else if (c == '@') {
+            addToken(&i, TOKEN_TYPE_MACRO);
         } else if (c == '(' || c == ')') {
             addToken(&i, c == '(' ? TOKEN_TYPE_ARG_START : TOKEN_TYPE_ARG_END);
         } else if (c == ',') {

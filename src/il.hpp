@@ -85,6 +85,11 @@ namespace engine {
         const DeclareVariable* ret;
         vector<const DeclareVariable*> args;
     };
+
+    struct InlineAsm {
+        const DeclareFunction* function;
+        string code;
+    };
     
     enum InstructionType {
         IL_TYPE_UNKNOWN,
@@ -92,13 +97,14 @@ namespace engine {
         IL_TYPE_DECLARE_FUNCTION,
         IL_TYPE_RETURN,
         IL_TYPE_EQ_SET,
-        IL_TYPE_FUNC_CALL
+        IL_TYPE_FUNC_CALL,
+        IL_TYPE_INLINE_ASM
     };
 
     struct IL_Instruction {
         uint64_t id;
         InstructionType type;
-        variant<DeclareVariable, DeclareFunction, FunctionReturn, EQSet, FunctionCall> data;
+        variant<DeclareVariable, DeclareFunction, FunctionReturn, EQSet, FunctionCall, InlineAsm> data;
 
         IL_Instruction() {}
         ~IL_Instruction() {}
@@ -130,12 +136,14 @@ namespace engine {
             [[nodiscard]] pair<vector<IL_Instruction*>, size_t> AnalyzeReturn(const DeclareFunction* function, const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeOperator(const DeclareFunction* function, const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeCall(const DeclareFunction* function, const Token& token) const;
+            [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeMacro(const DeclareFunction* function, const Token& token) const;
 
             [[nodiscard]] const DeclareFunction* FindFunction(const string& name) const;
 
             [[nodiscard]] const DeclareVariable* FindVariable(const DeclareFunction* function, const string& name) const;
             [[nodiscard]] DeclareVariable* MakeVariable(const DeclareFunction* function, const Token& token) const;
 
+            
             vector<Token> m_tokens;
             vector<const IL_Instruction*> m_ils;
     };

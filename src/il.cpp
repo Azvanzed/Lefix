@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <charconv>
 #include <limits>
+#include <regex>
 
 using namespace std;
 
@@ -57,6 +58,11 @@ void engine::IL::analyze() {
             } break;
             case TOKEN_TYPE_OPERATOR: {
                 auto [il, size] = AnalyzeOperator(function, token);
+                m_ils.push_back(il);
+                i += size - 1;
+            } break;
+            case TOKEN_TYPE_MACRO: {
+                auto [il, size] = AnalyzeMacro(function, token);
                 m_ils.push_back(il);
                 i += size - 1;
             } break;
@@ -379,6 +385,30 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeCall(const DeclareFunct
     call.callee = callee;
     call.args = move(args);
     return { CreateIL(IL_TYPE_FUNC_CALL, call), size };
+}
+
+pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeMacro(const DeclareFunction* function, const Token& token) const {
+    ASSERT(function != nullptr, "Expected function declaration before macro");
+    ASSERT(Move(token, 1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier after macro");
+
+
+    if (Move(token, 1).value == "asm") {
+        ASSERT(Move(token, 2).type == TOKEN_TYPE_ARG_START, "Expected '(' after asm macro");
+        ASSERT(Move(token, 3).type == TOKEN_TYPE_STRING, "Expected string after asm macro");
+        ASSERT(Move(token, 4).type == TOKEN_TYPE_ARG_END, "Expected ')' after asm macro");
+    
+        string code = Move(token, 3).value.substr(1, Move(token, 3).value.size() - 2);
+        code = regex_replace(code, regex("\n\\s*"), "\n");
+        code = regex_replace(code, regex("^\\s+|\\s+$"), "");
+
+        InlineAsm inline_asm;
+        inline_asm.function = function;
+        inline_asm.code = code;
+        
+        return { CreateIL(IL_TYPE_INLINE_ASM, inline_asm), 7 };
+    }
+
+    return { nullptr, 2 };
 }
 
 const engine::DeclareFunction* engine::IL::FindFunction(const string& name) const {

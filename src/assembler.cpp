@@ -2,6 +2,8 @@
 #include "io.hpp"
 #include <fstream>
 #include <unordered_map>
+#include <algorithm>
+#include <sstream>
 #include "assert.hpp"
 
 using namespace std;
@@ -62,6 +64,22 @@ void engine::Assembler::sub(const string& dst, const string& src, const string& 
     }
 
     m_output += "\n";
+}
+
+void engine::Assembler::insert(const string& code, const string& comment) {
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    istringstream iss(code);
+    ostringstream oss;
+
+    string line;
+    while (getline(iss, line)) {
+        oss << "\t" << line << "\n";
+    }
+
+    m_output += oss.str();
 }
 
 void engine::Assembler::mov(const string& dst, const string& src, const string& comment) {
@@ -145,6 +163,7 @@ string engine::Assembler::getGP0(size_t size) {
 }
 
 size_t engine::Assembler::AlignStack(size_t offset, size_t size) {
+    size = min<size_t>(8, size);
     if (offset % size == 0) {
         return offset;
     }
@@ -234,6 +253,10 @@ void engine::Assembler::assemble() {
         for (const IL_Instruction* insn : routine->insns) {
             switch (insn->type)
             {
+            case IL_TYPE_INLINE_ASM: {
+                const InlineAsm* data = &get<InlineAsm>(insn->data);
+                insert(data->code);
+            } break;
             case IL_TYPE_EQ_SET: {
                 const EQSet* data = &get<EQSet>(insn->data);
                 

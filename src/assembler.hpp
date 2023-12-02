@@ -53,6 +53,7 @@ namespace engine {
             void label(const string& name, const string& comment = "");
             void add(const string& dst, const string& src, const string& comment = "");
             void sub(const string& dst, const string& src, const string& comment = "");
+            void insert(const string& code, const string& comment = "");
             void mov(const string& dst, const string& src, const string& comment = "");
             void push(const string& src, const string& comment = "");
             void pop(const string& dst, const string& comment = "");

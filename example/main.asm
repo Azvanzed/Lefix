@@ -1,9 +1,13 @@
 other:
 	sub rsp, 16 ; reserve locals
-	mov al, 32 ; var_24001
+	mov al, 32 ; var_26949
 	mov byte [rsp+8], al ; hi
-	mov al, 64 ; var_61614
+	mov al, 64 ; var_30034
 	mov byte [rsp+12], al ; hey
+	mov rax, 6000
+	nop
+	nop
+	pause
 	mov al, byte [rsp+8] ; hi
 	mov byte [rsp+12], al ; hey
 	mov eax, dword [rsp+12] ; hey
@@ -16,8 +20,8 @@ efi_main:
 	mov qword [rsp+0], rax
 	call other
 	add rsp, 8 ; free args
-	mov qword [rsp+16], rax ; ret_20757
-	mov rax, qword [rsp+16] ; ret_20757
+	mov qword [rsp+16], rax ; ret_64207
+	mov rax, qword [rsp+16] ; ret_64207
 	add rsp, 24 ; free locals
 	ret
 global _start; ; for testing

@@ -2,6 +2,13 @@ fn u64 other(u64 a1) {
     u8 hi = 32;
     u32 hey = 64;
 
+    @asm("
+        mov rax, 6000
+        nop
+        nop
+        pause
+    ");
+
     hey = hi;
     ret hey;
 }
