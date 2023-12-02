@@ -24,6 +24,7 @@ namespace engine {
         VAR_FLAGS_NONE = 0,
         VAR_FLAGS_ARG = (1 << 0),
         VAR_FLAGS_IMMEDIATE = (1 << 1),
+        VAR_FLAGS_PTR = (1 << 2),
     };
 
     const static unordered_map<string, DataType> DATA_TYPES = {

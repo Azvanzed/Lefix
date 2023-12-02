@@ -11,9 +11,17 @@ engine::Assembler::Assembler() {
 
 engine::Assembler::Assembler(const vector<const IL_Instruction*>& ils) 
     : m_ils(move(ils)){
+    m_routines.clear();
 }
 
 engine::Assembler::~Assembler() {
+    for (const AsmRoutine* routine : m_routines) {
+        for (const auto [var, local] : routine->stack) {
+            delete local;
+        }
+     
+        delete routine;
+    }
 }
 
 void engine::Assembler::global(const string& name, const string& comment) {
@@ -208,7 +216,9 @@ void engine::Assembler::assemble() {
         label(routine->name);
 
         // reserve stack for variables
-        sub("rsp", to_string(routine->stack_size), "reserve locals");
+        if (routine->stack_size > 0) {
+            sub("rsp", to_string(routine->stack_size), "reserve locals");
+        }
 
         // assemble instructions
         for (const IL_Instruction* insn : routine->insns) {
@@ -227,13 +237,13 @@ void engine::Assembler::assemble() {
                 if (!(right->flags & VAR_FLAGS_IMMEDIATE)) {
                     const AsmLocal* right_stack = routine->stack.at(right);
                   
-                    int64_t offset = right_stack->offset;
+                    int64_t right_offset = right_stack->offset;
                     if (right->flags & VAR_FLAGS_ARG) {
-                        offset += routine->stack_size + 8;
+                        right_offset += routine->stack_size + 8;
                     }
 
                     // read from var within the stack
-                    mov(gp0, mem + " [rsp+" + to_string(offset) + "]", right->name);
+                    mov(gp0, mem + " [rsp+" + to_string(right_offset) + "]", right->name);
                 }
                 else {
                     // write to gp0 reg imm value
@@ -242,9 +252,17 @@ void engine::Assembler::assemble() {
 
                 // write to var within the stack
                 const AsmLocal* left_stack = routine->stack.at(left);
-                mov(mem + " [rsp+" + to_string(left_stack->offset) + "]", gp0, left->name);
+            
+                int64_t left_offset = left_stack->offset;
+                 if (left->flags & VAR_FLAGS_ARG) {
+                    left_offset += routine->stack_size + 8;
+                }
+
+                mov(mem + " [rsp+" + to_string(left_offset) + "]", gp0, left->name);
             } break;
             case IL_TYPE_FUNC_CALL: {
+                printf("FUNC_CALL\n");
+
                 const FunctionCall* data = &get<FunctionCall>(insn->data);
                 
                 size_t stack_size = 0;
@@ -252,10 +270,15 @@ void engine::Assembler::assemble() {
                     const string& mem = getMemSize(arg->size);
 
                     if (!(arg->flags & VAR_FLAGS_IMMEDIATE)) {
-                        const AsmLocal* right_stack = routine->stack.at(arg);
+                        const AsmLocal* arg_stack = routine->stack.at(arg);
+
+                        int64_t arg_offset = arg_stack->offset;
+                        if (arg->flags & VAR_FLAGS_ARG) {
+                            arg_offset += routine->stack_size + 8;
+                        }
 
                         // push value within var from stack
-                        push(mem + " [rsp+" + to_string(right_stack->offset) + "]",  arg->name);
+                        push(mem + " [rsp+" + to_string(arg_offset) + "]",  arg->name);
                     }
                     else {
                         // push immediate value
@@ -266,7 +289,25 @@ void engine::Assembler::assemble() {
                 }
 
                 call(data->callee->name);
-                add("rsp", to_string(stack_size), "free args");
+
+                if (data->ret != nullptr) {
+                    const string& mem = getMemSize(data->ret->size);
+                    const string& gp0 = getGP0(data->ret->size);
+
+                    const AsmLocal* ret_stack = routine->stack.at(data->ret);
+
+                    int64_t ret_offset = ret_stack->offset;
+                    if (data->ret->flags & VAR_FLAGS_ARG) {
+                        ret_offset += routine->stack_size + 8;
+                    }
+
+                    // write to var within the stack from gp0 (result)
+                    mov(mem + " [rsp+" + to_string(ret_offset) + "]", gp0, data->ret->name);
+                }
+
+                if (stack_size > 0) {
+                    add("rsp", to_string(stack_size), "free args");
+                }
             } break;
             case IL_TYPE_RETURN: {
                 printf("RETURN\n");
@@ -280,6 +321,7 @@ void engine::Assembler::assemble() {
                 if (!(var->flags & VAR_FLAGS_IMMEDIATE)) {
                     const AsmLocal* var_stack = routine->stack.at(var);
 
+                    // calculate stack offset
                     int64_t offset = var_stack->offset;
                     if (var->flags & VAR_FLAGS_ARG) {
                         offset += routine->stack_size + 8;
@@ -293,7 +335,10 @@ void engine::Assembler::assemble() {
                     mov(gp0, to_string(IL::getImm(var->value)), var->name);
                 }
 
-                add("rsp", to_string(routine->stack_size), "free locals");
+                if (routine->stack_size > 0) {
+                    add("rsp", to_string(routine->stack_size), "free locals");
+                } 
+
                 _ret();
             } break;
             default: break;
@@ -313,6 +358,7 @@ void engine::Assembler::assemble() {
     mov("rax", "1", "sys_exit");
     _int("0x80");
 }
+
 
 void engine::Assembler::create(const string& filename) const {
     io::File file(filename);

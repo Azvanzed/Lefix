@@ -1,7 +1,12 @@
+other:
+	mov al, 128 ; var_36741
+	ret
 efi_main:
-	sub rsp, 16 ; reserve locals
-	mov al, 32 ; var_3614
-	add rsp, 16 ; free locals
+	sub rsp, 24 ; reserve locals
+	call other
+	mov qword [rsp+16], rax ; test
+	mov rax, qword [rsp+16] ; test
+	add rsp, 24 ; free locals
 	ret
 global _start; ; for testing
 _start:

@@ -121,7 +121,11 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeDeclareFunction(const T
             ASSERT(Move(token, size + 1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier after data type in argument");
 
             auto [il_arg, il_size] = AnalyzeDeclareVariable((DeclareFunction*)&il->data, arg);
-            get<DeclareFunction>(il->data).args.push_back(get<DeclareVariable>(il_arg->data));
+
+            DeclareVariable* var = &get<DeclareVariable>(il_arg->data);
+            var->flags |= VAR_FLAGS_ARG;
+
+            get<DeclareFunction>(il->data).args.push_back(*var);
             delete il_arg;
 
             size += 3;
@@ -159,14 +163,8 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
     switch (src.type)
     {
     case TOKEN_TYPE_IDENTIFIER: {
-        if (const DeclareVariable* arg = getArg(function, src.value)) {
-            ((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
-            ret.var = arg;
-        }
-        else {
-            ret.var = FindVariable(function, src.value);
-        }
-
+        ret.var = FindVariable(function, src.value);
+        
         if (ret.function->ret_type == DATA_TYPE_STR) {
             ASSERT(ret.var->type == DATA_TYPE_STR, "Expected string type at return statement of '%s'", function->name.data());
         } else {
@@ -247,25 +245,35 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
         EQSet set;
         set.function = function;
         set.left = FindVariable(function, left.value);
-
+        
         switch (right.type)
         {
             case TOKEN_TYPE_IDENTIFIER: {
-                if (const DeclareVariable* arg = getArg(function, right.value)) {
-                    ((DeclareVariable*)arg)->flags |= VAR_FLAGS_ARG;
-                    set.right = arg;
+                if (const DeclareFunction* callee = FindFunction(right.value)) {
+                    if (set.left->type == DATA_TYPE_STR) {
+                        ASSERT(callee->ret_type == DATA_TYPE_STR, "Expected string type");
+                    } else {
+                        ASSERT(callee->ret_type != DATA_TYPE_STR, "Expected number type");
+                    }
+
+                    ASSERT(set.left->size >= DATA_TYPE_SIZES.at(callee->ret_type), "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+
+                    auto [il_call, il_size] = AnalyzeCall(function, right);
+                    get<FunctionCall>(il_call->data).ret = set.left;
+                    
+                    return { il_call, il_size };
                 }
                 else {
                     set.right = FindVariable(function, right.value);
-                }
                 
-                if (set.left->type == DATA_TYPE_STR) {
-                    ASSERT(set.right->type == DATA_TYPE_STR, "Expected string type");
-                } else {
-                    ASSERT(set.right->type != DATA_TYPE_STR, "Expected number type");
-                }
+                    if (set.left->type == DATA_TYPE_STR) {
+                        ASSERT(set.right->type == DATA_TYPE_STR, "Expected string type");
+                    } else {
+                        ASSERT(set.right->type != DATA_TYPE_STR, "Expected number type");
+                    }
 
-                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+                    ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+                }
             } break;
             case TOKEN_TYPE_STRING: {
                 set.right = MakeVariable(function, right);
