@@ -1,38 +1,9 @@
-fn u64 smol_pause() {
-    @asm("
-        pause
-    ");
+fn u32 hehe() {
+    u32 i = 0;
 
-    ret 0;
+    ret i;
 }
 
-fn u64 other(u64 a1) {
-    u8 hi = 32;
-    u32 hey = 64;
-
-
-    @asm("
-        push rcx
-        mov rcx, 40000000
-        .sleep:
-            test rcx, rcx
-            jz .leave
-
-            call smol_pause
-
-            dec rcx
-            jmp .sleep
-            
-        .leave:
-        pop rcx
-    ");
-
-    hey = hi;
-
-
-    ret hey;
-}
-
-fn u64 efi_main(u64 image_handle, u64 st) {
-    ret other(image_handle);
+fn efi_main(u64 image_handle, u64 st) {
+    ret;
 }

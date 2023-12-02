@@ -247,6 +247,56 @@ void engine::Assembler::translate() {
     }
 }
 
+void engine::Assembler::optimize() {
+    // Remove stack if no locals are used
+    for (AsmRoutine* routine : m_routines) {
+        if (routine->stack.empty()) {
+            continue;
+        }
+
+        vector<const AsmLocal*> used_locals;
+        for (const IL_Instruction* insn : routine->insns) {
+            switch (insn->type) {
+                case IL_TYPE_EQ_SET: {
+                    const EQSet* data = &get<EQSet>(insn->data);
+                    const DeclareVariable* left = data->left;
+                    const DeclareVariable* right = data->right;
+                    
+                    if (!(left->flags & VAR_FLAGS_IMMEDIATE)) {
+                        used_locals.push_back(routine->stack.at(left));
+                    }
+
+                    if (!(right->flags & VAR_FLAGS_IMMEDIATE)) {
+                        used_locals.push_back(routine->stack.at(right));
+                    }
+                } break;
+                case IL_TYPE_RETURN: {
+                    const FunctionReturn* data = &get<FunctionReturn>(insn->data);
+                    if (data->var != nullptr) {
+                        used_locals.push_back(routine->stack.at(data->var));
+                    }
+                } break;
+                case IL_TYPE_FUNC_CALL: {
+                    const FunctionCall* data = &get<FunctionCall>(insn->data);
+                    if (data->ret != nullptr) {
+                        used_locals.push_back(routine->stack.at(data->ret));
+                    }
+
+                    for (const DeclareVariable* arg : data->args) {
+                        used_locals.push_back(routine->stack.at(arg));
+                    }
+                } break;
+                default: break;
+            }
+        }
+
+        if (used_locals.empty() == true) {
+            routine->stack_size = false;
+            routine->stack.clear();
+        }
+    }
+}
+
 void engine::Assembler::assemble() {
     for (const AsmRoutine* routine : m_routines) {
         // create a label for the function
@@ -270,7 +320,6 @@ void engine::Assembler::assemble() {
                 
                 const DeclareVariable* left = data->left;
                 const DeclareVariable* right = data->right;
-                printf("EQ_SET (%s = %s)\n",left->name.data(), right->name.data());
   
                 const string& mem = getMemSize(right->size);
                 const string& gp0 = getGP0(right->size);
@@ -302,8 +351,6 @@ void engine::Assembler::assemble() {
                 mov(mem + " [rsp+" + to_string(left_offset) + "]", gp0, left->name);
             } break;
             case IL_TYPE_FUNC_CALL: {
-                printf("FUNC_CALL\n");
-
                 const FunctionCall* data = &get<FunctionCall>(insn->data);
                 
                 size_t stack_size = 0;
@@ -345,7 +392,6 @@ void engine::Assembler::assemble() {
                     const string& mem = getMemSize(ret_size);
                     const string& gp0 = getGP0(ret_size);
 
-                    printf("STACK_RET %s\n", data->ret->name.data());
                     const AsmLocal* ret_stack = routine->stack.at(data->ret);
 
                     int64_t ret_offset = ret_stack->offset;
@@ -359,29 +405,30 @@ void engine::Assembler::assemble() {
 
             } break;
             case IL_TYPE_RETURN: {
-                printf("RETURN\n");
-
                 const FunctionReturn* data = &get<FunctionReturn>(insn->data);
-                const DeclareVariable* var = data->var;
-                
-                const string& gp0 = getGP0(var->size);
-                const string& mem = getMemSize(var->size);
 
-                if (!(var->flags & VAR_FLAGS_IMMEDIATE)) {
-                    const AsmLocal* var_stack = routine->stack.at(var);
+                if (data->var != nullptr) {
+                    const DeclareVariable* var = data->var;
 
-                    // calculate stack offset
-                    int64_t offset = var_stack->offset;
-                    if (var->flags & VAR_FLAGS_ARG) {
-                        offset += routine->stack_size + 8;
+                    const string& gp0 = getGP0(var->size);
+                    const string& mem = getMemSize(var->size);
+
+                    if (!(var->flags & VAR_FLAGS_IMMEDIATE)) {
+                        const AsmLocal* var_stack = routine->stack.at(var);
+
+                        // calculate stack offset
+                        int64_t offset = var_stack->offset;
+                        if (var->flags & VAR_FLAGS_ARG) {
+                            offset += routine->stack_size + 8;
+                        }
+
+                        // read from var within the stack
+                        mov(gp0, mem + " [rsp+" + to_string(offset) + "]", var->name);
                     }
-
-                    // read from var within the stack
-                    mov(gp0, mem + " [rsp+" + to_string(offset) + "]", var->name);
-                }
-                else {
-                    // write to gp0 reg imm value
-                    mov(gp0, to_string(IL::getImm(var->value)), var->name);
+                    else {
+                        // write to gp0 reg imm value
+                        mov(gp0, to_string(IL::getImm(var->value)), var->name);
+                    }
                 }
 
                 if (routine->stack_size > 0) {

@@ -12,20 +12,35 @@ int main() {
     auto code = file.read<string>();
     ASSERT(!code.empty(), "Failed to read file");
     
-    printf("Tokenizing code\n");
+    printf("Step 1:\n");
     engine::Tokenizer tokenizer(code);
+    
+    printf("\t- Cleaning\n");
     tokenizer.cleanup();
+
+    printf("\t- Tokenizing\n");
     tokenizer.tokenize();
 
-    printf("Analyzing tokens\n");
+    printf("Step 2:\n");
     engine::IL il(tokenizer.getTokens());
+    printf("\t- Analyzing\n");
     il.analyze();
+
+    printf("\t- Optimizing\n");
     il.optimize();
 
-    printf("Assembling IL\n");
+    printf("Step 3:\n");
     engine::Assembler assembler(il.getILs());
+    printf("\t- Translating\n");
     assembler.translate();
+
+    printf("\t- Optimizing\n");
+    assembler.optimize();
+    
+    printf("\t- Assembling\n");
     assembler.assemble();
+
+    printf("\t- Saving\n");
     assembler.create("example/main.asm");
 
     return EXIT_SUCCESS;

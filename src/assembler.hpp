@@ -45,6 +45,7 @@ namespace engine {
             ~Assembler();
 
             void translate();
+            void optimize();
             void assemble();
             void create(const string& filename) const;
             
@@ -68,7 +69,7 @@ namespace engine {
         private:
             string m_output;
             vector<const IL_Instruction*> m_ils;
-            vector<const AsmRoutine*> m_routines;
+            vector<AsmRoutine*> m_routines;
     };
 }
 

@@ -111,18 +111,29 @@ engine::IL_Instruction* engine::IL::CreateIL(InstructionType type, const auto& d
 }
 
 pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeDeclareFunction(const Token& token) const {
-    ASSERT(isDataType(Move(token, 1)) == true, "Expected data type after 'fn' keyword");
-    ASSERT(Move(token, 2).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier after data type");
-    ASSERT(Move(token, 3).type == TOKEN_TYPE_ARG_START, "Expected '(' after function identifier");
-
     DeclareFunction fn;
-    fn.name = Move(token, 2).value;
     fn.args.clear();
-    fn.ret_type = DATA_TYPES.at(Move(token, 1).value);
+
+    size_t size = 1;
+    if (Move(token, 1).type == TOKEN_TYPE_IDENTIFIER) {
+        fn.name = Move(token, 1).value;
+        fn.ret_type = DATA_TYPE_NONE;
+        size += 1;
+    }
+    else if (isDataType(Move(token, 1))) {
+        fn.name = Move(token, 2).value;
+        fn.ret_type = DATA_TYPES.at(Move(token, 1).value);
+        size += 2;
+    }
+    else {
+        CRASH("Expected data type or identifier after 'fn' keyword");
+    }
+
+    ASSERT(Move(token, size).type == TOKEN_TYPE_ARG_START, "Expected '(' after function declaration");
+    size += 1;
 
     IL_Instruction* il = CreateIL(IL_TYPE_DECLARE_FUNCTION, fn);
-
-    size_t size = 4;
+    
     if (Move(token, size).type != TOKEN_TYPE_ARG_END) {
         while (true) {
             const Token& arg = Move(token, size);
@@ -168,6 +179,11 @@ pair<vector<engine::IL_Instruction*>, size_t> engine::IL::AnalyzeReturn(const De
 
     FunctionReturn ret;
     ret.function = function;
+    ret.var = nullptr;
+
+    if (ret.function->ret_type == DATA_TYPE_NONE) {
+        return { { CreateIL(IL_TYPE_RETURN, ret) }, 1 };
+    }
 
     switch (src.type)
     {

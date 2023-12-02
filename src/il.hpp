@@ -8,6 +8,7 @@ using namespace std;
 
 namespace engine {
     enum DataType {
+        DATA_TYPE_NONE = 0,
         DATA_TYPE_I64,
         DATA_TYPE_I32,
         DATA_TYPE_I16,
