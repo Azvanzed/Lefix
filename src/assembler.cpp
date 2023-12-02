@@ -67,8 +67,10 @@ void engine::Assembler::sub(const string& dst, const string& src, const string& 
 }
 
 void engine::Assembler::insert(const string& code, const string& comment) {
+    m_output += "\n";
+
     if (comment.empty() == false) {
-        m_output += " ; " + comment;
+        m_output += " ; " + comment + "\n";
     }
 
     istringstream iss(code);
@@ -80,6 +82,12 @@ void engine::Assembler::insert(const string& code, const string& comment) {
     }
 
     m_output += oss.str();
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment + "\n";
+    }
+
+    m_output += "\n";
 }
 
 void engine::Assembler::mov(const string& dst, const string& src, const string& comment) {
@@ -255,7 +263,7 @@ void engine::Assembler::assemble() {
             {
             case IL_TYPE_INLINE_ASM: {
                 const InlineAsm* data = &get<InlineAsm>(insn->data);
-                insert(data->code);
+                insert(data->code, "Inlined assembly");
             } break;
             case IL_TYPE_EQ_SET: {
                 const EQSet* data = &get<EQSet>(insn->data);

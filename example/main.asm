@@ -1,13 +1,19 @@
 smol_pause:
+
+ ; Inlined assembly
 	pause
-	mov al, 0 ; var_61527
+ ; Inlined assembly
+
+	mov al, 0 ; var_64410
 	ret
 other:
 	sub rsp, 16 ; reserve locals
-	mov al, 32 ; var_56934
+	mov al, 32 ; var_61354
 	mov byte [rsp+8], al ; hi
-	mov al, 64 ; var_44884
+	mov al, 64 ; var_16283
 	mov byte [rsp+12], al ; hey
+
+ ; Inlined assembly
 	push rcx
 	mov rcx, 40000000
 	.sleep:
@@ -18,6 +24,8 @@ other:
 	jmp .sleep
 	.leave:
 	pop rcx
+ ; Inlined assembly
+
 	mov al, byte [rsp+8] ; hi
 	mov byte [rsp+12], al ; hey
 	mov eax, dword [rsp+12] ; hey
@@ -30,8 +38,8 @@ efi_main:
 	mov qword [rsp+0], rax
 	call other
 	add rsp, 8 ; free args
-	mov qword [rsp+16], rax ; ret_47395
-	mov rax, qword [rsp+16] ; ret_47395
+	mov qword [rsp+16], rax ; ret_50375
+	mov rax, qword [rsp+16] ; ret_50375
 	add rsp, 24 ; free locals
 	ret
 global _start; ; for testing
