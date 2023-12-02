@@ -127,7 +127,7 @@ namespace engine {
 
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeDeclareFunction(const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeDeclareVariable(const DeclareFunction* function, const Token& token) const; 
-            [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeReturn(const DeclareFunction* function, const Token& token) const;
+            [[nodiscard]] pair<vector<IL_Instruction*>, size_t> AnalyzeReturn(const DeclareFunction* function, const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeOperator(const DeclareFunction* function, const Token& token) const;
             [[nodiscard]] pair<IL_Instruction*, size_t> AnalyzeCall(const DeclareFunction* function, const Token& token) const;
 

@@ -12,14 +12,17 @@ int main() {
     auto code = file.read<string>();
     ASSERT(!code.empty(), "Failed to read file");
     
+    printf("Tokenizing code\n");
     engine::Tokenizer tokenizer(code);
     tokenizer.cleanup();
     tokenizer.tokenize();
 
+    printf("Analyzing tokens\n");
     engine::IL il(tokenizer.getTokens());
     il.analyze();
     il.optimize();
 
+    printf("Assembling IL\n");
     engine::Assembler assembler(il.getILs());
     assembler.translate();
     assembler.assemble();

@@ -270,7 +270,7 @@ void engine::Assembler::assemble() {
                     const string& mem = getMemSize(arg->size);
                     const string& gp0 = getGP0(arg->size);
 
-                    // resreve space for the var
+                    // reserve space for the var
                     sub("rsp", to_string(arg->size / 8), "reserve " + arg->name);
 
                     if (!(arg->flags & VAR_FLAGS_IMMEDIATE)) {
@@ -303,6 +303,7 @@ void engine::Assembler::assemble() {
                     const string& mem = getMemSize(ret_size);
                     const string& gp0 = getGP0(ret_size);
 
+                    printf("STACK_RET %s\n", data->ret->name.data());
                     const AsmLocal* ret_stack = routine->stack.at(data->ret);
 
                     int64_t ret_offset = ret_stack->offset;

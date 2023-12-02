@@ -38,8 +38,11 @@ void engine::IL::analyze() {
                     i += size - 1;
                 }
                 else if (token.value == "ret") {
-                    auto [il, size] = AnalyzeReturn(function, token);
-                    m_ils.push_back(il);
+                    auto [ils, size] = AnalyzeReturn(function, token);
+                    for (const IL_Instruction* il : ils) {
+                        m_ils.push_back(il);
+                    }
+
                     i += size - 1;
                 }
             } break;
@@ -152,7 +155,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeDeclareVariable(const D
     return { CreateIL(IL_TYPE_DECLARE_VARIABLE, var), 2 };    
 }
 
-pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFunction* function, const Token& token) const {
+pair<vector<engine::IL_Instruction*>, size_t> engine::IL::AnalyzeReturn(const DeclareFunction* function, const Token& token) const {
     ASSERT(function != nullptr, "Expected function declaration before return keyword");
 
     const Token& src = Move(token, 1);
@@ -163,6 +166,32 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
     switch (src.type)
     {
     case TOKEN_TYPE_IDENTIFIER: {
+        if (FindFunction(src.value) != nullptr) {
+            vector<IL_Instruction*> ils;
+
+            auto [il_call, il_size] = AnalyzeCall(function, src);
+
+            DeclareVariable ret_var;
+            ret_var.flags = VAR_FLAGS_NONE;
+            ret_var.function = function;
+            ret_var.name = "ret_" + to_string(getRandomId());
+            ret_var.type = get<FunctionCall>(il_call->data).callee->ret_type;
+            ret_var.size = DATA_TYPE_SIZES.at(ret_var.type);
+            ret_var.value = "";
+            
+            IL_Instruction* il_var = CreateIL(IL_TYPE_DECLARE_VARIABLE, ret_var);
+            get<FunctionCall>(il_call->data).ret = (const DeclareVariable*)&il_var->data;
+
+            ret.var = (const DeclareVariable*)&il_var->data;
+            IL_Instruction* il_ret = CreateIL(IL_TYPE_RETURN, ret);
+
+            ils.push_back(il_var);
+            ils.push_back(il_call);
+            ils.push_back(il_ret);
+            
+            return { ils, il_size + 1 };
+        }
+
         ret.var = FindVariable(function, src.value);
         
         if (ret.function->ret_type == DATA_TYPE_STR) {
@@ -188,7 +217,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeReturn(const DeclareFun
     default: ASSERT(false, "Expected identifier after return keyword"); break;
     }
 
-    return { CreateIL(IL_TYPE_RETURN, ret), 2 };
+    return { { CreateIL(IL_TYPE_RETURN, ret) }, 2 };
 }
 
 uint64_t engine::IL::getImm(const string& value) {
