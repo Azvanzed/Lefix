@@ -62,6 +62,7 @@ namespace engine {
 
             [[nodiscard]] static string getMemSize(size_t size);
             [[nodiscard]] static string getGP0(size_t size);
+            [[nodiscard]] static size_t AlignStack(size_t offset, size_t size);
 
         private:
             string m_output;

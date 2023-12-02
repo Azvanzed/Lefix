@@ -1,5 +1,9 @@
 fn u64 other(u64 a1) {
-    ret a1;
+    u8 hi = 32;
+    u32 hey = 64;
+
+    hey = hi;
+    ret hey;
 }
 
 fn u64 efi_main(u64 image_handle, u64 st) {

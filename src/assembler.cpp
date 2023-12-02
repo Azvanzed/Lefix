@@ -144,6 +144,15 @@ string engine::Assembler::getGP0(size_t size) {
     }
 }
 
+size_t engine::Assembler::AlignStack(size_t offset, size_t size) {
+    size_t diff = offset % size;
+    if (diff > 0) {
+        return size - diff;
+    }
+
+    return 0;
+}
+
 void engine::Assembler::translate() {
     for (const IL_Instruction* il : m_ils) {
         switch (il->type) {
@@ -174,7 +183,7 @@ void engine::Assembler::translate() {
                     AsmLocal* local = new AsmLocal;
                     local->size = var->size / 8;
                     local->type = var->value.empty() == false ? ASM_LOCAL_TYPE_IMMEDIATE : ASM_LOCAL_TYPE_NONE; 
-                    local->offset = routine->stack_size;
+                    local->offset = AlignStack(routine->stack_size, local->size);
 
                     switch (local->type) {
                         case ASM_LOCAL_TYPE_IMMEDIATE: {
@@ -191,7 +200,9 @@ void engine::Assembler::translate() {
                     }
 
                     routine->stack.emplace(var, local);
-                    routine->stack_size += local->size;
+
+                    size_t diff = local->offset - routine->stack_size;
+                    routine->stack_size += diff + local->size;
                 }
 
                 for (const IL_Instruction* il : m_ils) {
