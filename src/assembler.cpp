@@ -280,6 +280,7 @@ void engine::Assembler::assemble() {
                         if (arg->flags & VAR_FLAGS_ARG) {
                             arg_offset += routine->stack_size + 8;
                         }
+                        arg_offset += arg->size / 8; // skip the reserved space
 
                         mov(gp0, mem + " [rsp+" + to_string(arg_offset) + "]", arg->name);
                         mov(mem + " [rsp]", gp0);

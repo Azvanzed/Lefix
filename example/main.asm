@@ -1,12 +1,20 @@
 other:
-	mov al, 32 ; var_10075
+	sub rsp, 16 ; reserve locals
+	mov rax, qword [rsp+24] ; a1
+	mov qword [rsp+8], rax ; a
+	mov rax, qword [rsp+8] ; a
+	add rsp, 16 ; free locals
 	ret
 efi_main:
-	sub rsp, 17 ; reserve locals
+	sub rsp, 24 ; reserve locals
+	sub rsp, 8 ; reserve image_handle
+	mov rax, qword [rsp+40] ; image_handle
+	mov qword [rsp], rax
 	call other
-	mov byte [rsp+16], al ; ret_65255
-	mov al, byte [rsp+16] ; ret_65255
-	add rsp, 17 ; free locals
+	add rsp, 8 ; free args
+	mov qword [rsp+16], rax ; ret_25357
+	mov rax, qword [rsp+16] ; ret_25357
+	add rsp, 24 ; free locals
 	ret
 global _start; ; for testing
 _start:
