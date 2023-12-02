@@ -1,4 +1,12 @@
+hehe:
+	sub rsp, 4 ; reserve locals
+	mov al, 0 ; var_61694
+	mov byte [rsp+0], al ; i
+	mov eax, dword [rsp+0] ; i
+	add rsp, 4 ; free locals
+	ret
 efi_main:
+	call hehe
 	ret
 global _start; ; for testing
 _start:

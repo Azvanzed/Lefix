@@ -74,26 +74,29 @@ void engine::IL::analyze() {
 void engine::IL::optimize() {
     // remove unused routines (except efi_main)
     vector<const DeclareFunction*> used_routines;
-    vector<const DeclareFunction*> unused_routines;
-    
     for (const IL_Instruction* il : m_ils) {
         if (il->type == IL_TYPE_FUNC_CALL) {
             const FunctionCall& fn = get<FunctionCall>(il->data);
             used_routines.push_back(fn.callee);
-        } else if (il->type == IL_TYPE_DECLARE_FUNCTION) {
+        }
+    }
+    
+    vector<const DeclareFunction*> unused_routines;
+    for (const IL_Instruction* il : m_ils) {
+        if (il->type == IL_TYPE_DECLARE_FUNCTION) {
             const DeclareFunction& fn = get<DeclareFunction>(il->data);
             if (fn.name != "efi_main" && find(used_routines.begin(), used_routines.end(), &fn) == used_routines.end()) {
                 unused_routines.push_back(&fn);
             }
         }
     }
-    
+
     for (const DeclareFunction* fn : unused_routines) {
-        auto it = find_if(m_ils.begin(), m_ils.end(), [fn](const IL_Instruction* il) {
-            return il->type == IL_TYPE_DECLARE_FUNCTION && &get<DeclareFunction>(il->data) == fn;
-        });
-        if (it != m_ils.end()) {
-            m_ils.erase(it);
+        for (size_t i = 0; i < m_ils.size(); ++i) {
+            if (m_ils[i]->type == IL_TYPE_DECLARE_FUNCTION && &get<DeclareFunction>(m_ils[i]->data) == fn) {
+                m_ils.erase(m_ils.begin() + i);
+                break;
+            }
         }
     }
 }
