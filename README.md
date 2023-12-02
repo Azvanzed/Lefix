@@ -9,7 +9,8 @@ TODO:
 + Make code gud
 + Remake the IL parser use some sort of handler table
 + ~~Return value of function calls~~
-+ Inline assembly
++ ~~Inline assembly~~
++ Variable access in inline assembly
 + UEFI SDK
 + AST for operations
 + Compiler Hooks
