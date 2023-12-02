@@ -220,7 +220,7 @@ pair<vector<engine::IL_Instruction*>, size_t> engine::IL::AnalyzeReturn(const De
         ret.var = MakeVariable(function, src);
         ASSERT(DATA_TYPE_SIZES.at(function->ret_type) >= ret.var->size, "Integer overflow at return statement of '%s'", function->name.data());
     } break;
-    default: ASSERT(false, "Expected identifier after return keyword"); break;
+    default: CRASH("Expected identifier after return keyword"); break;
     }
 
     return { { CreateIL(IL_TYPE_RETURN, ret) }, 2 };
@@ -320,7 +320,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareF
                 ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
             } break;
             default:
-                ASSERT(false, "Unexpected token type");
+                CRASH("Unexpected token type");
                 break;
         }
         
@@ -361,10 +361,10 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeCall(const DeclareFunct
     }
 
     if (args.size() < callee->args.size()) {
-        ASSERT(false, "Too few arguments at call '%s' within '%s'", callee->name.data(), function->name.data());
+        CRASH("Too few arguments at call '%s' within '%s'", callee->name.data(), function->name.data());
     }
     else if (args.size() > callee->args.size()){ 
-        ASSERT(false, "Too many arguments at call '%s' within '%s'", callee->name.data(), function->name.data());
+        CRASH("Too many arguments at call '%s' within '%s'", callee->name.data(), function->name.data());
     }
    
     for (size_t i = 0; i < args.size(); ++i) {
@@ -408,6 +408,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeMacro(const DeclareFunc
         return { CreateIL(IL_TYPE_INLINE_ASM, inline_asm), 7 };
     }
 
+    CRASH("Unknown macro");
     return { nullptr, 2 };
 }
 
@@ -442,7 +443,7 @@ const engine::DeclareVariable* engine::IL::FindVariable(const DeclareFunction* f
         }
     }
 
-    ASSERT(false, "Variable '%s' not found within '%s'", name.data(), function->name.data());
+    CRASH("Variable '%s' not found within '%s'", name.data(), function->name.data());
     return nullptr;
 }
 
