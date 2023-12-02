@@ -145,12 +145,11 @@ string engine::Assembler::getGP0(size_t size) {
 }
 
 size_t engine::Assembler::AlignStack(size_t offset, size_t size) {
-    size_t diff = offset % size;
-    if (diff > 0) {
-        return size - diff;
+    if (offset % size == 0) {
+        return offset;
     }
 
-    return 0;
+    return offset + (size - (offset % size));
 }
 
 void engine::Assembler::translate() {
@@ -184,6 +183,7 @@ void engine::Assembler::translate() {
                     local->size = var->size / 8;
                     local->type = var->value.empty() == false ? ASM_LOCAL_TYPE_IMMEDIATE : ASM_LOCAL_TYPE_NONE; 
                     local->offset = AlignStack(routine->stack_size, local->size);
+                    printf("offset: %ld\n", local->offset);
 
                     switch (local->type) {
                         case ASM_LOCAL_TYPE_IMMEDIATE: {
@@ -294,11 +294,11 @@ void engine::Assembler::assemble() {
                         arg_offset += arg->size / 8; // skip the reserved space
 
                         mov(gp0, mem + " [rsp+" + to_string(arg_offset) + "]", arg->name);
-                        mov(mem + " [rsp]", gp0);
+                        mov(mem + " [rsp+0]", gp0);
                     }
                     else {
                         mov(gp0, to_string(IL::getImm(arg->value)), arg->name);
-                        mov(mem + " [rsp]", gp0);
+                        mov(mem + " [rsp+0]", gp0);
                     }
 
                     stack_size += arg->size / 8;
