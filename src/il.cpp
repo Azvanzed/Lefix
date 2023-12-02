@@ -72,7 +72,30 @@ void engine::IL::analyze() {
 }
 
 void engine::IL::optimize() {
-    // TODO
+    // remove unused routines (except efi_main)
+    vector<const DeclareFunction*> used_routines;
+    vector<const DeclareFunction*> unused_routines;
+    
+    for (const IL_Instruction* il : m_ils) {
+        if (il->type == IL_TYPE_FUNC_CALL) {
+            const FunctionCall& fn = get<FunctionCall>(il->data);
+            used_routines.push_back(fn.callee);
+        } else if (il->type == IL_TYPE_DECLARE_FUNCTION) {
+            const DeclareFunction& fn = get<DeclareFunction>(il->data);
+            if (fn.name != "efi_main" && find(used_routines.begin(), used_routines.end(), &fn) == used_routines.end()) {
+                unused_routines.push_back(&fn);
+            }
+        }
+    }
+    
+    for (const DeclareFunction* fn : unused_routines) {
+        auto it = find_if(m_ils.begin(), m_ils.end(), [fn](const IL_Instruction* il) {
+            return il->type == IL_TYPE_DECLARE_FUNCTION && &get<DeclareFunction>(il->data) == fn;
+        });
+        if (it != m_ils.end()) {
+            m_ils.erase(it);
+        }
+    }
 }
 
 const vector<const engine::IL_Instruction*>& engine::IL::getILs() const {
@@ -399,6 +422,7 @@ pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeCall(const DeclareFunct
     FunctionCall call;
     call.function = function;
     call.callee = callee;
+    call.ret = nullptr;
     call.args = move(args);
     return { CreateIL(IL_TYPE_FUNC_CALL, call), size };
 }

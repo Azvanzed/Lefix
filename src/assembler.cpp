@@ -257,6 +257,12 @@ void engine::Assembler::optimize() {
         vector<const AsmLocal*> used_locals;
         for (const IL_Instruction* insn : routine->insns) {
             switch (insn->type) {
+                case IL_TYPE_RETURN: {
+                    const FunctionReturn* data = &get<FunctionReturn>(insn->data);
+                    if (data->var != nullptr) {
+                        used_locals.push_back(routine->stack.at(data->var));
+                    }
+                } break;
                 case IL_TYPE_EQ_SET: {
                     const EQSet* data = &get<EQSet>(insn->data);
                     const DeclareVariable* left = data->left;
@@ -270,18 +276,12 @@ void engine::Assembler::optimize() {
                         used_locals.push_back(routine->stack.at(right));
                     }
                 } break;
-                case IL_TYPE_RETURN: {
-                    const FunctionReturn* data = &get<FunctionReturn>(insn->data);
-                    if (data->var != nullptr) {
-                        used_locals.push_back(routine->stack.at(data->var));
-                    }
-                } break;
                 case IL_TYPE_FUNC_CALL: {
                     const FunctionCall* data = &get<FunctionCall>(insn->data);
                     if (data->ret != nullptr) {
                         used_locals.push_back(routine->stack.at(data->ret));
                     }
-
+                    
                     for (const DeclareVariable* arg : data->args) {
                         used_locals.push_back(routine->stack.at(arg));
                     }
