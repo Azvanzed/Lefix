@@ -1,11 +1,9 @@
-fn efi_main(u64 image_handle, u64 st) {
-    u32 hehe = 25;
+fn u64 efi_main(u64 image_handle, u64 st) {
+    u64 result = 40;
+    result %= 25;
+    result *= 2;
+    result <= 2;
+    result >= 1;
 
-    $asm("
-        mov rax, qword [@hehe]
-        add rsp, @stack_size
-        ret
-    ");
-
-    ret;
+    ret result;
 }

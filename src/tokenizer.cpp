@@ -33,7 +33,7 @@ void engine::Tokenizer::cleanup() {
 }
 
 void engine::Tokenizer::tokenize() {
-    const static string operators = "=}+-*/%^&|~!<>";
+    const static string operators = "+-*/%^&|~!<>";
 
     auto addToken = [&](size_t* i, TokenType type, size_t length = 1) {
         string value = m_code.substr(*i, length);
@@ -75,9 +75,12 @@ void engine::Tokenizer::tokenize() {
             string value = m_code.substr(i, j - i);
             TokenType type = (KEYWORDS.find(value) != KEYWORDS.end()) ? KEYWORDS.at(value) : TOKEN_TYPE_IDENTIFIER;
             addToken(&i, type, j - i);
-        } else if (operators.find(c) != string::npos) {
+        } else if (operators.find(c) != string::npos && m_code[i + 1] == '=') {
+            addToken(&i, TOKEN_TYPE_OPERATOR, 2);
+        } else if (c == '=') {
             addToken(&i, TOKEN_TYPE_OPERATOR);
-        } else {
+        }
+        else {
             size_t j = i;
             while (j < m_code.size() && !isspace(m_code[j]) && !isalnum(m_code[j]) && m_code[j] != '_' && m_code[j] != '"') ++j;
             addToken(&i, TOKEN_TYPE_UNKNOWN, j - i);

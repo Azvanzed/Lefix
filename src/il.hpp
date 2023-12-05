@@ -28,6 +28,18 @@ namespace engine {
         VAR_FLAGS_PTR = (1 << 2),
     };
 
+    enum SetType {
+        SET_TYPE_DIRECT = 0,
+        SET_TYPE_ADD,
+        SET_TYPE_SUB,
+        SET_TYPE_MUL,
+        SET_TYPE_DIV,
+        SET_TYPE_REM,
+        SET_TYPE_XOR,
+        SET_TYPE_SHIFTR,
+        SET_TYPE_SHIFTL,
+    };
+
     const static unordered_map<string, DataType> DATA_TYPES = {
         { "i64", DATA_TYPE_I64 },
         { "i32", DATA_TYPE_I32 },
@@ -78,6 +90,7 @@ namespace engine {
         const DeclareFunction* function;
         const DeclareVariable* left;
         const DeclareVariable* right;
+        SetType type;
     };
 
     struct FunctionCall {

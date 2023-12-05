@@ -320,61 +320,85 @@ bool engine::IL::isDataType(const Token& token) {
 pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareFunction* function, const Token& token) const {
     ASSERT(Move(token, -1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier before '=' operator");
 
-    if (token.value == "=" && Move(token, -1).type != TOKEN_TYPE_OPERATOR) {
-        const Token& left = Move(token, -1);
-        const Token& right = Move(token, 1);
+    EQSet set;
+    set.function = function;
 
-        EQSet set;
-        set.function = function;
-        set.left = FindVariable(function, left.value);
-        
-        switch (right.type)
-        {
-            case TOKEN_TYPE_IDENTIFIER: {
-                if (const DeclareFunction* callee = FindFunction(right.value)) {
-                    if (set.left->type == DATA_TYPE_STR) {
-                        ASSERT(callee->ret_type == DATA_TYPE_STR, "Expected string type");
-                    } else {
-                        ASSERT(callee->ret_type != DATA_TYPE_STR, "Expected number type");
-                    }
-
-                    ASSERT(set.left->size >= DATA_TYPE_SIZES.at(callee->ret_type), "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
-
-                    auto [il_call, il_size] = AnalyzeCall(function, right);
-                    get<FunctionCall>(il_call->data).ret = set.left;
-                    
-                    return { il_call, il_size };
-                }
-                else {
-                    set.right = FindVariable(function, right.value);
-                
-                    if (set.left->type == DATA_TYPE_STR) {
-                        ASSERT(set.right->type == DATA_TYPE_STR, "Expected string type");
-                    } else {
-                        ASSERT(set.right->type != DATA_TYPE_STR, "Expected number type");
-                    }
-
-                    ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
-                }
-            } break;
-            case TOKEN_TYPE_STRING: {
-                set.right = MakeVariable(function, right);
-                ASSERT(set.left->type == DATA_TYPE_STR, "Expected number type");
-            } break;
-            case TOKEN_TYPE_NUMBER: {
-                set.right = MakeVariable(function, right);
-                ASSERT(set.left->type != DATA_TYPE_STR, "Expected string type");
-                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
-            } break;
-            default:
-                CRASH("Unexpected token type");
-                break;
-        }
-        
-        return { CreateIL(IL_TYPE_EQ_SET, set), 2 };
+    if (token.value == "+=") {
+        set.type = SET_TYPE_ADD;
+    }
+    else if (token.value == "-=") {
+        set.type = SET_TYPE_SUB;
+    }
+    else if (token.value == "*=") {
+        set.type = SET_TYPE_MUL;
+    }
+    else if (token.value == "/=") {
+        set.type = SET_TYPE_DIV;
+    }
+    else if (token.value == "%=") {
+        set.type = SET_TYPE_REM;
+    }
+    else if (token.value == ">=") {
+        set.type = SET_TYPE_SHIFTR;
+    }
+    else if (token.value == "<=") {
+        set.type = SET_TYPE_SHIFTL;
+    }
+    else if (token.value == "=") {
+        set.type = SET_TYPE_DIRECT;
+    }
+    else {
+        CRASH("Unknown operator");
     }
 
-    return { nullptr, 1 };
+    const Token& left = Move(token, -1);
+    const Token& right = Move(token, 1);
+
+    set.left = FindVariable(function, left.value);
+
+    switch (right.type)
+    {
+        case TOKEN_TYPE_IDENTIFIER: {
+            if (const DeclareFunction* callee = FindFunction(right.value)) {
+                if (set.left->type == DATA_TYPE_STR) {
+                    ASSERT(callee->ret_type == DATA_TYPE_STR, "Expected string type");
+                } else {
+                    ASSERT(callee->ret_type != DATA_TYPE_STR, "Expected number type");
+                }
+                
+                ASSERT(set.left->size >= DATA_TYPE_SIZES.at(callee->ret_type), "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+                auto [il_call, il_size] = AnalyzeCall(function, right);
+                get<FunctionCall>(il_call->data).ret = set.left;
+                
+                return { il_call, il_size };
+            }
+            else {
+                set.right = FindVariable(function, right.value);
+            
+                if (set.left->type == DATA_TYPE_STR) {
+                    ASSERT(set.right->type == DATA_TYPE_STR, "Expected string type");
+                } else {
+                    ASSERT(set.right->type != DATA_TYPE_STR, "Expected number type");
+                }
+               
+                ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+            }
+        } break;
+        case TOKEN_TYPE_STRING: {
+            set.right = MakeVariable(function, right);
+            ASSERT(set.left->type == DATA_TYPE_STR, "Expected number type");
+        } break;
+        case TOKEN_TYPE_NUMBER: {
+            set.right = MakeVariable(function, right);
+            ASSERT(set.left->type != DATA_TYPE_STR, "Expected string type");
+            ASSERT(set.left->size >= set.right->size, "Integer overflow at '%s' < '%s' within '%s'", left.value.data(), right.value.data(), function->name.data());
+        } break;
+        default:
+            CRASH("Unexpected token type");
+            break;
+    }
+ 
+    return { CreateIL(IL_TYPE_EQ_SET, set), 2 };
 }
 
 pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeCall(const DeclareFunction* function, const Token& token) const {

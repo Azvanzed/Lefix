@@ -66,11 +66,32 @@ void engine::Assembler::sub(const string& dst, const string& src, const string& 
     m_output += "\n";
 }
 
+void engine::Assembler::div(const string& src, const string& comment) {
+    m_output += "\tdiv " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+void engine::Assembler::mul(const string& src, const string& comment) {
+    m_output += "\tmul " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+
 void engine::Assembler::insert(const string& code, const string& comment) {
     m_output += "\n";
 
     if (comment.empty() == false) {
-        m_output += " ; " + comment + "\n";
+        m_output += "\t; " + comment + "\n";
     }
 
     istringstream iss(code);
@@ -84,7 +105,7 @@ void engine::Assembler::insert(const string& code, const string& comment) {
     m_output += oss.str();
 
     if (comment.empty() == false) {
-        m_output += " ; " + comment + "\n";
+        m_output += "\t; " + comment + "\n";
     }
 
     m_output += "\n";
@@ -130,6 +151,36 @@ void engine::Assembler::call(const string& dst, const string& comment) {
     m_output += "\n";
 }
 
+void engine::Assembler::_xor(const string& dst, const string& src, const string& comment) {
+    m_output += "\txor " + dst += ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+void engine::Assembler::shr(const string& dst, const string& src, const string& comment) {
+    m_output += "\tshr " + dst += ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+void engine::Assembler::shl(const string& dst, const string& src, const string& comment) {
+    m_output += "\tshl " + dst += ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
 void engine::Assembler::_ret(const string& comment) {
     m_output += "\tret";
 
@@ -139,6 +190,8 @@ void engine::Assembler::_ret(const string& comment) {
 
     m_output += "\n";
 }
+
+
 
 void engine::Assembler::_int(const string& value, const string& comment) {
     m_output += "\tint " + value;
@@ -354,23 +407,27 @@ void engine::Assembler::assemble() {
                 const DeclareVariable* left = data->left;
                 const DeclareVariable* right = data->right;
   
-                const string& mem = getMemSize(right->size);
-                const string& gp0 = getGP0(right->size);
+                const string& left_mem = getMemSize(left->size);
+                const string& right_mem = getMemSize(right->size);
+                const string& left_gp0 = getGP0(left->size);
+                const string& right_gp0 = getGP0(right->size);
 
-                if (!(right->flags & VAR_FLAGS_IMMEDIATE)) {
-                    const AsmLocal* right_stack = routine->stack.at(right);
-                  
-                    int64_t right_offset = right_stack->offset;
-                    if (right->flags & VAR_FLAGS_ARG) {
-                        right_offset += routine->stack_size + 8;
+                if (data->type != SET_TYPE_SHIFTL && data->type != SET_TYPE_SHIFTR) {
+                    if (!(right->flags & VAR_FLAGS_IMMEDIATE)) {
+                        const AsmLocal* right_stack = routine->stack.at(right);
+
+                        int64_t right_offset = right_stack->offset;
+                        if (right->flags & VAR_FLAGS_ARG) {
+                            right_offset += routine->stack_size + 8;
+                        }
+
+                        // read from var within the stack
+                        mov(right_gp0, right_mem + " [rsp+" + to_string(right_offset) + "]", right->name);
                     }
-
-                    // read from var within the stack
-                    mov(gp0, mem + " [rsp+" + to_string(right_offset) + "]", right->name);
-                }
-                else {
-                    // write to gp0 reg imm value
-                    mov(gp0, to_string(IL::getImm(right->value)), right->name);
+                    else {
+                        // write to gp0 reg imm value
+                        mov(right_gp0, to_string(IL::getImm(right->value)), right->name);
+                    }
                 }
 
                 // write to var within the stack
@@ -380,8 +437,48 @@ void engine::Assembler::assemble() {
                  if (left->flags & VAR_FLAGS_ARG) {
                     left_offset += routine->stack_size + 8;
                 }
-
-                mov(mem + " [rsp+" + to_string(left_offset) + "]", gp0, left->name);
+                
+                switch (data->type) {
+                    case SET_TYPE_DIRECT: {
+                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                    } break;
+                    case SET_TYPE_ADD: {
+                        add(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                    } break;
+                    case SET_TYPE_SUB: {
+                        sub(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                    } break;
+                    case SET_TYPE_XOR: {
+                        _xor(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                    } break;
+                    case SET_TYPE_SHIFTL: {
+                        shl(left_mem + " [rsp+" + to_string(left_offset) + "]", to_string(IL::getImm(right->value)), left->name);
+                    } break;
+                    case SET_TYPE_SHIFTR: {
+                        shr(left_mem + " [rsp+" + to_string(left_offset) + "]", to_string(IL::getImm(right->value)), left->name);
+                    } break;
+                    case SET_TYPE_MUL: {   
+                        mov("rbx", "rax");
+                        mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
+                        mul("rbx", right->name);   
+                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rax", left->name); 
+                    } break;
+                    case SET_TYPE_DIV: {
+                        mov("rbx", "rax");
+                        _xor("rdx", "rdx");
+                        mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
+                        div("rbx", right->name);   
+                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rax", left->name);
+                    } break;
+                    case SET_TYPE_REM: {
+                        mov("rbx", "rax");
+                        _xor("rdx", "rdx");
+                        mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
+                        div("rbx", right->name);   
+                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rdx", left->name);
+                    } break;
+                    default: break;
+                }
             } break;
             case IL_TYPE_FUNC_CALL: {
                 const FunctionCall* data = &get<FunctionCall>(insn->data);
