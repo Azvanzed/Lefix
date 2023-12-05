@@ -1,9 +1,9 @@
-fn u64 efi_main(u64 image_handle, u64 st) {
-    u64 result = 40;
-    result %= 25;
-    result *= 2;
-    result <= 2;
-    result >= 1;
+fn u8 efi_main(u64 image_handle, u64 st) {
+    u8 mask = 0;
+    # 0000 0001
+    
+    mask ~= mask;
 
-    ret result;
+    
+    ret mask;
 }

@@ -52,18 +52,21 @@ namespace engine {
         private:
             void global(const string& name, const string& comment = "");
             void label(const string& name, const string& comment = "");
-            void add(const string& dst, const string& src, const string& comment = "");
-            void sub(const string& dst, const string& src, const string& comment = "");
+            void _add(const string& dst, const string& src, const string& comment = "");
+            void _sub(const string& dst, const string& src, const string& comment = "");
             void _xor(const string& dst, const string& src, const string& comment = "");
-            void shr(const string& dst, const string& src, const string& comment = "");
-            void shl(const string& dst, const string& src, const string& comment = "");
-            void div(const string& src, const string& comment = "");
-            void mul(const string& src, const string& comment = "");
+            void _and(const string& dst, const string& src, const string& comment = "");
+            void _or(const string& dst, const string& src, const string& comment = "");
+            void _not(const string& src, const string& comment = "");
+            void _shr(const string& dst, const string& src, const string& comment = "");
+            void _shl(const string& dst, const string& src, const string& comment = "");
+            void _div(const string& src, const string& comment = "");
+            void _mul(const string& src, const string& comment = "");
             void insert(const string& code, const string& comment = "");
-            void mov(const string& dst, const string& src, const string& comment = "");
-            void push(const string& src, const string& comment = "");
-            void pop(const string& dst, const string& comment = "");
-            void call(const string& dst, const string& comment = "");
+            void _mov(const string& dst, const string& src, const string& comment = "");
+            void _push(const string& src, const string& comment = "");
+            void _pop(const string& dst, const string& comment = "");
+            void _call(const string& dst, const string& comment = "");
             void _ret(const string& comment = "");
             void _int(const string& value, const string& comment = "");
 

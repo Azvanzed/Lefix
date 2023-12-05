@@ -38,6 +38,9 @@ namespace engine {
         SET_TYPE_XOR,
         SET_TYPE_SHIFTR,
         SET_TYPE_SHIFTL,
+        SET_TYPE_AND,
+        SET_TYPE_NOT,
+        SET_TYPE_OR,
     };
 
     const static unordered_map<string, DataType> DATA_TYPES = {
@@ -51,6 +54,21 @@ namespace engine {
         { "u8", DATA_TYPE_U8 },
         { "str", DATA_TYPE_STR },
         { "bool", DATA_TYPE_BOOL }
+    };
+
+    const static unordered_map<string, SetType> OPERATION_TYPES = {
+        { "=", SET_TYPE_DIRECT },
+        { "+=", SET_TYPE_ADD },
+        { "-=", SET_TYPE_SUB },
+        { "*=", SET_TYPE_MUL },
+        { "/=", SET_TYPE_DIV },
+        { "%=", SET_TYPE_REM },
+        { "^=", SET_TYPE_XOR },
+        { ">>=", SET_TYPE_SHIFTR },
+        { "<<=", SET_TYPE_SHIFTL },
+        { "&=", SET_TYPE_AND },
+        { "~=", SET_TYPE_NOT },
+        { "|=", SET_TYPE_OR }
     };
 
     const static unordered_map<DataType, uint8_t> DATA_TYPE_SIZES = {

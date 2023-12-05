@@ -33,8 +33,6 @@ void engine::Tokenizer::cleanup() {
 }
 
 void engine::Tokenizer::tokenize() {
-    const static string operators = "+-*/%^&|~!<>";
-
     auto addToken = [&](size_t* i, TokenType type, size_t length = 1) {
         string value = m_code.substr(*i, length);
         uint64_t id = getRandomId();
@@ -43,8 +41,25 @@ void engine::Tokenizer::tokenize() {
         *i += length;
     };
 
+    static vector<string> OPERATORS = {
+        "=",
+        "+=",
+        "-=",
+        "*=",
+        "/=",
+        "%=",
+        "^=",
+        ">>=",
+        "<<=",
+        "&=", 
+        "~=", 
+        "|="
+    };
+
     for (size_t i = 0; i < m_code.size();) {
         char c = m_code[i];
+
+        printf("Found operator: %s\n", m_code.substr(i, 2).data());
 
         if (isspace(c)) {
             ++i;
@@ -75,9 +90,11 @@ void engine::Tokenizer::tokenize() {
             string value = m_code.substr(i, j - i);
             TokenType type = (KEYWORDS.find(value) != KEYWORDS.end()) ? KEYWORDS.at(value) : TOKEN_TYPE_IDENTIFIER;
             addToken(&i, type, j - i);
-        } else if (operators.find(c) != string::npos && m_code[i + 1] == '=') {
+        } else if (i + 1 < m_code.size() && find(OPERATORS.begin(), OPERATORS.end(), m_code.substr(i, 2)) != OPERATORS.end()) {
             addToken(&i, TOKEN_TYPE_OPERATOR, 2);
-        } else if (c == '=') {
+        } else if (i + 2 < m_code.size() && find(OPERATORS.begin(), OPERATORS.end(), m_code.substr(i, 3)) != OPERATORS.end()) {
+            addToken(&i, TOKEN_TYPE_OPERATOR, 3);
+        } else if (find(OPERATORS.begin(), OPERATORS.end(), m_code.substr(i, 1)) != OPERATORS.end()) {
             addToken(&i, TOKEN_TYPE_OPERATOR);
         }
         else {

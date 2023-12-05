@@ -46,8 +46,8 @@ void engine::Assembler::label(const string& name, const string& comment) {
     m_output += "\n";
 }
 
-void engine::Assembler::add(const string& dst, const string& src, const string& comment) {
-    m_output += "\tadd " + dst += ", " + src;
+void engine::Assembler::_add(const string& dst, const string& src, const string& comment) {
+    m_output += "\tadd " + dst + ", " + src;
 
     if (comment.empty() == false) {
         m_output += " ; " + comment;
@@ -56,8 +56,8 @@ void engine::Assembler::add(const string& dst, const string& src, const string& 
     m_output += "\n";
 }
 
-void engine::Assembler::sub(const string& dst, const string& src, const string& comment) {
-    m_output += "\tsub " + dst += ", " + src;
+void engine::Assembler::_sub(const string& dst, const string& src, const string& comment) {
+    m_output += "\tsub " + dst + ", " + src;
 
     if (comment.empty() == false) {
         m_output += " ; " + comment;
@@ -66,7 +66,7 @@ void engine::Assembler::sub(const string& dst, const string& src, const string& 
     m_output += "\n";
 }
 
-void engine::Assembler::div(const string& src, const string& comment) {
+void engine::Assembler::_div(const string& src, const string& comment) {
     m_output += "\tdiv " + src;
 
     if (comment.empty() == false) {
@@ -76,7 +76,7 @@ void engine::Assembler::div(const string& src, const string& comment) {
     m_output += "\n";
 }
 
-void engine::Assembler::mul(const string& src, const string& comment) {
+void engine::Assembler::_mul(const string& src, const string& comment) {
     m_output += "\tmul " + src;
 
     if (comment.empty() == false) {
@@ -111,8 +111,8 @@ void engine::Assembler::insert(const string& code, const string& comment) {
     m_output += "\n";
 }
 
-void engine::Assembler::mov(const string& dst, const string& src, const string& comment) {
-    m_output += "\tmov " + dst += ", " + src;
+void engine::Assembler::_mov(const string& dst, const string& src, const string& comment) {
+    m_output += "\tmov " + dst + ", " + src;
 
     if (comment.empty() == false) {
         m_output += " ; " + comment;
@@ -121,7 +121,7 @@ void engine::Assembler::mov(const string& dst, const string& src, const string& 
     m_output += "\n";
 }
 
-void engine::Assembler::push(const string& src, const string& comment) {
+void engine::Assembler::_push(const string& src, const string& comment) {
     m_output += "\tpush " + src;
 
     if (comment.empty() == false) {
@@ -131,7 +131,7 @@ void engine::Assembler::push(const string& src, const string& comment) {
     m_output += "\n";
 }
 
-void engine::Assembler::pop(const string& dst, const string& comment) {
+void engine::Assembler::_pop(const string& dst, const string& comment) {
     m_output += "\tpop " + dst;
 
     if (comment.empty() == false) {
@@ -141,7 +141,7 @@ void engine::Assembler::pop(const string& dst, const string& comment) {
     m_output += "\n";
 }
 
-void engine::Assembler::call(const string& dst, const string& comment) {
+void engine::Assembler::_call(const string& dst, const string& comment) {
     m_output += "\tcall " + dst;
     
     if (comment.empty() == false) {
@@ -152,7 +152,7 @@ void engine::Assembler::call(const string& dst, const string& comment) {
 }
 
 void engine::Assembler::_xor(const string& dst, const string& src, const string& comment) {
-    m_output += "\txor " + dst += ", " + src;
+    m_output += "\txor " + dst + ", " + src;
 
     if (comment.empty() == false) {
         m_output += " ; " + comment;
@@ -161,8 +161,8 @@ void engine::Assembler::_xor(const string& dst, const string& src, const string&
     m_output += "\n";
 }
 
-void engine::Assembler::shr(const string& dst, const string& src, const string& comment) {
-    m_output += "\tshr " + dst += ", " + src;
+void engine::Assembler::_or(const string& dst, const string& src, const string& comment) {
+    m_output += "\tor " + dst + ", " + src;
 
     if (comment.empty() == false) {
         m_output += " ; " + comment;
@@ -171,8 +171,38 @@ void engine::Assembler::shr(const string& dst, const string& src, const string& 
     m_output += "\n";
 }
 
-void engine::Assembler::shl(const string& dst, const string& src, const string& comment) {
-    m_output += "\tshl " + dst += ", " + src;
+void engine::Assembler::_not(const string& src, const string& comment) {
+    m_output += "\tnot " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+void engine::Assembler::_and(const string& dst, const string& src, const string& comment) {
+    m_output += "\tand " + dst + ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+void engine::Assembler::_shr(const string& dst, const string& src, const string& comment) {
+    m_output += "\tshr " + dst + ", " + src;
+
+    if (comment.empty() == false) {
+        m_output += " ; " + comment;
+    }
+
+    m_output += "\n";
+}
+
+void engine::Assembler::_shl(const string& dst, const string& src, const string& comment) {
+    m_output += "\tshl " + dst + ", " + src;
 
     if (comment.empty() == false) {
         m_output += " ; " + comment;
@@ -359,7 +389,7 @@ void engine::Assembler::assemble() {
 
         // reserve stack for variables
         if (routine->stack_size > 0) {
-            sub("rsp", to_string(routine->stack_size), "reserve locals");
+            _sub("rsp", to_string(routine->stack_size), "reserve locals");
         }
 
         // assemble instructions
@@ -422,11 +452,11 @@ void engine::Assembler::assemble() {
                         }
 
                         // read from var within the stack
-                        mov(right_gp0, right_mem + " [rsp+" + to_string(right_offset) + "]", right->name);
+                        _mov(right_gp0, right_mem + " [rsp+" + to_string(right_offset) + "]", right->name);
                     }
                     else {
                         // write to gp0 reg imm value
-                        mov(right_gp0, to_string(IL::getImm(right->value)), right->name);
+                        _mov(right_gp0, to_string(IL::getImm(right->value)), right->name);
                     }
                 }
 
@@ -440,42 +470,51 @@ void engine::Assembler::assemble() {
                 
                 switch (data->type) {
                     case SET_TYPE_DIRECT: {
-                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                        _mov(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
                     } break;
                     case SET_TYPE_ADD: {
-                        add(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                        _add(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
                     } break;
                     case SET_TYPE_SUB: {
-                        sub(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                        _sub(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
                     } break;
                     case SET_TYPE_XOR: {
                         _xor(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
                     } break;
+                    case SET_TYPE_OR: {
+                        _or(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                    } break;
+                    case SET_TYPE_NOT: {
+                        _not(left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
+                    } break;
+                    case SET_TYPE_AND: {
+                        _and(left_mem + " [rsp+" + to_string(left_offset) + "]", left_gp0, left->name);
+                    } break;
                     case SET_TYPE_SHIFTL: {
-                        shl(left_mem + " [rsp+" + to_string(left_offset) + "]", to_string(IL::getImm(right->value)), left->name);
+                        _shl(left_mem + " [rsp+" + to_string(left_offset) + "]", to_string(IL::getImm(right->value)), left->name);
                     } break;
                     case SET_TYPE_SHIFTR: {
-                        shr(left_mem + " [rsp+" + to_string(left_offset) + "]", to_string(IL::getImm(right->value)), left->name);
+                        _shr(left_mem + " [rsp+" + to_string(left_offset) + "]", to_string(IL::getImm(right->value)), left->name);
                     } break;
                     case SET_TYPE_MUL: {   
-                        mov("rbx", "rax");
-                        mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
-                        mul("rbx", right->name);   
-                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rax", left->name); 
+                        _mov("rbx", "rax");
+                        _mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
+                        _mul("rbx", right->name);   
+                        _mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rax", left->name); 
                     } break;
                     case SET_TYPE_DIV: {
-                        mov("rbx", "rax");
+                        _mov("rbx", "rax");
                         _xor("rdx", "rdx");
-                        mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
-                        div("rbx", right->name);   
-                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rax", left->name);
+                        _mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
+                        _div("rbx", right->name);   
+                        _mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rax", left->name);
                     } break;
                     case SET_TYPE_REM: {
-                        mov("rbx", "rax");
+                        _mov("rbx", "rax");
                         _xor("rdx", "rdx");
-                        mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
-                        div("rbx", right->name);   
-                        mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rdx", left->name);
+                        _mov(left_gp0, left_mem + " [rsp+" + to_string(left_offset) + "]", left->name);
+                        _div("rbx", right->name);   
+                        _mov(left_mem + " [rsp+" + to_string(left_offset) + "]", "rdx", left->name);
                     } break;
                     default: break;
                 }
@@ -489,7 +528,7 @@ void engine::Assembler::assemble() {
                     const string& gp0 = getGP0(arg->size);
 
                     // reserve space for the var
-                    sub("rsp", to_string(arg->size / 8), "reserve " + arg->name);
+                    _sub("rsp", to_string(arg->size / 8), "reserve " + arg->name);
 
                     if (!(arg->flags & VAR_FLAGS_IMMEDIATE)) {
                         const AsmLocal* arg_stack = routine->stack.at(arg);
@@ -500,21 +539,21 @@ void engine::Assembler::assemble() {
                         }
                         arg_offset += arg->size / 8; // skip the reserved space
 
-                        mov(gp0, mem + " [rsp+" + to_string(arg_offset) + "]", arg->name);
-                        mov(mem + " [rsp+0]", gp0);
+                        _mov(gp0, mem + " [rsp+" + to_string(arg_offset) + "]", arg->name);
+                        _mov(mem + " [rsp+0]", gp0);
                     }
                     else {
-                        mov(gp0, to_string(IL::getImm(arg->value)), arg->name);
-                        mov(mem + " [rsp+0]", gp0);
+                        _mov(gp0, to_string(IL::getImm(arg->value)), arg->name);
+                        _mov(mem + " [rsp+0]", gp0);
                     }
 
                     stack_size += arg->size / 8;
                 }
 
-                call(data->callee->name);
+                _call(data->callee->name);
 
                 if (stack_size > 0) {
-                    add("rsp", to_string(stack_size), "free args");
+                    _add("rsp", to_string(stack_size), "free args");
                 }
                 
                 if (data->ret != nullptr) {
@@ -530,7 +569,7 @@ void engine::Assembler::assemble() {
                     }
 
                     // write to var within the stack from gp0 (result)
-                    mov(mem + " [rsp+" + to_string(ret_offset) + "]", gp0, data->ret->name);
+                    _mov(mem + " [rsp+" + to_string(ret_offset) + "]", gp0, data->ret->name);
                 }
 
             } break;
@@ -553,16 +592,16 @@ void engine::Assembler::assemble() {
                         }
 
                         // read from var within the stack
-                        mov(gp0, mem + " [rsp+" + to_string(offset) + "]", var->name);
+                        _mov(gp0, mem + " [rsp+" + to_string(offset) + "]", var->name);
                     }
                     else {
                         // write to gp0 reg imm value
-                        mov(gp0, to_string(IL::getImm(var->value)), var->name);
+                        _mov(gp0, to_string(IL::getImm(var->value)), var->name);
                     }
                 }
 
                 if (routine->stack_size > 0) {
-                    add("rsp", to_string(routine->stack_size), "free locals");
+                    _add("rsp", to_string(routine->stack_size), "free locals");
                 } 
 
                 _ret();
@@ -574,14 +613,14 @@ void engine::Assembler::assemble() {
 
     global("_start", "for testing");
     label("_start");
-    mov("rcx", "69"); 
-    mov("rdx", "96"); 
-    push("rdx", "SystemTable");
-    push("rcx", "ImageHandle");
-    call("efi_main");
-    add("rsp", "16", "free args");
-    mov("rbx", "rax", "exit code");
-    mov("rax", "1", "sys_exit");
+    _mov("rcx", "69"); 
+    _mov("rdx", "96"); 
+    _push("rdx", "SystemTable");
+    _push("rcx", "ImageHandle");
+    _call("efi_main");
+    _add("rsp", "16", "free args");
+    _mov("rbx", "rax", "exit code");
+    _mov("rax", "1", "sys_exit");
     _int("0x80");
 }
 

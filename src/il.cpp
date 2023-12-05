@@ -320,40 +320,12 @@ bool engine::IL::isDataType(const Token& token) {
 pair<engine::IL_Instruction*, size_t> engine::IL::AnalyzeOperator(const DeclareFunction* function, const Token& token) const {
     ASSERT(Move(token, -1).type == TOKEN_TYPE_IDENTIFIER, "Expected identifier before '=' operator");
 
-    EQSet set;
-    set.function = function;
-
-    if (token.value == "+=") {
-        set.type = SET_TYPE_ADD;
-    }
-    else if (token.value == "-=") {
-        set.type = SET_TYPE_SUB;
-    }
-    else if (token.value == "*=") {
-        set.type = SET_TYPE_MUL;
-    }
-    else if (token.value == "/=") {
-        set.type = SET_TYPE_DIV;
-    }
-    else if (token.value == "%=") {
-        set.type = SET_TYPE_REM;
-    }
-    else if (token.value == ">=") {
-        set.type = SET_TYPE_SHIFTR;
-    }
-    else if (token.value == "<=") {
-        set.type = SET_TYPE_SHIFTL;
-    }
-    else if (token.value == "=") {
-        set.type = SET_TYPE_DIRECT;
-    }
-    else {
-        CRASH("Unknown operator");
-    }
-
     const Token& left = Move(token, -1);
     const Token& right = Move(token, 1);
 
+    EQSet set;
+    set.function = function;
+    set.type = OPERATION_TYPES.at(token.value);
     set.left = FindVariable(function, left.value);
 
     switch (right.type)
